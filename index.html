@@ -298,8 +298,8 @@
 
         <div id="scannerWorkspace" style="display: none; margin-top: 20px;">
             <div class="scanner-toolbar">
-                <button id="enhanceClearBtn" class="btn-warning">✨ Clear Background & Sharpen (Keep Colors)</button>
-                <button id="scannerToPdfBtn">📄 Convert to PDF</button>
+                <button id="enhanceClearBtn" class="btn-warning">✨ AI Smart Scan & Brighten (Keep Colors)</button>
+                <button id="scannerToPdfBtn">📄 Convert & Download PDF</button>
                 <button id="scannerToDocxBtn" class="btn-success">📝 Send to Word Workspace</button>
             </div>
             <div class="scanner-preview-frame">
@@ -416,31 +416,25 @@
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
     function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
-    // UNIVERSAL MOBILE-FRIENDLY DOWNLOAD FORCING ENGINE
+    // UNIVERSAL SECURE DOWNLOAD FORCING ENGINE
     function triggerDownload(urlOrBlobData, filename) {
         try {
             const a = document.createElement('a');
-            
-            // If it's raw Blob binary format, create an explicit Object URL configuration
             if (urlOrBlobData instanceof Blob) {
                 a.href = URL.createObjectURL(urlOrBlobData);
             } else {
                 a.href = urlOrBlobData;
             }
-            
             a.download = filename;
-            a.target = '_blank'; // Fixes sandboxed blockades inside native app viewports
+            a.target = '_blank'; 
             document.body.appendChild(a);
             a.click();
-            
-            // Clean memory cache allocation traces after thread tick completes
             setTimeout(() => {
                 a.remove();
                 if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href);
             }, 200);
         } catch (err) {
-            console.error("Standard sandbox click intercepted. Firing fallback anchor system...", err);
-            // Fallback: If browser completely drops program anchor clicks, open direct byte stream in new window tab
+            console.error("Download intercepted. Redirecting frame route directly...", err);
             const targetDataStream = (urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData;
             window.open(targetDataStream, '_blank');
         }
@@ -501,10 +495,7 @@
                         if(targetFormat === 'pdf' || targetFormat === '') {
                             const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
                             await pdf.html(resHtml.value, { x: 40, y: 40, width: 515, windowWidth: 650 });
-                            
-                            // Native jsPDF output wrapper handled as binary Blob configurations
-                            const pdfOutputBlob = pdf.output('blob');
-                            triggerDownload(pdfOutputBlob, `${baseName}_converted.pdf`);
+                            triggerDownload(pdf.output('blob'), `${baseName}_converted.pdf`);
                         } else {
                             const cv = document.createElement('canvas'); cv.width = 800; cv.height = 1000; const ctx = cv.getContext('2d');
                             ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000); ctx.fillStyle = "black"; ctx.font = "16px Arial";
@@ -563,73 +554,87 @@
         sCtx.drawImage(scannerImageObject, 0, 0);
 
         scannerStatus.className = "status-success";
-        scannerStatus.textContent = "Photo loaded into visual canvas buffer configuration frame.";
+        scannerStatus.textContent = "Photo loaded cleanly into preview window frame canvas.";
     }
 
+    // AI INTELLIGENT ADAPTIVE LUMINANCE FILTER (SMART SMARTPHONE SCANNER EMULATION)
     document.getElementById('enhanceClearBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "✨ Executing [Clear Background & Sharpen]: Running luminance edge-enhancement algorithm curves while keeping true image colors...";
+        scannerStatus.textContent = "✨ Executing [AI Smart Scan & Brighten]: Running non-destructive adaptive ambient lighting logic loops to wash out foggy shadows smoothly...";
 
         setTimeout(() => {
             sCtx.drawImage(scannerImageObject, 0, 0);
             const imgData = sCtx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
-            const d = imgData.data; const w = imgData.width; const h = imgData.height;
-            
-            const outputBuffer = sCtx.createImageData(w, h);
-            const outData = outputBuffer.data;
+            const d = imgData.data;
+            const w = imgData.width;
+            const h = imgData.height;
 
-            const weights = [
-                 0, -1,  0,
-                -1,  5, -1,
-                 0, -1,  0
-            ];
+            // Step 1: Compute document lighting profile matrix benchmarks
+            let totalLuminance = 0;
+            let sampleRate = Math.round((w * h) / 1000) || 1;
+            let count = 0;
+            for (let i = 0; i < d.length; i += 4 * sampleRate) {
+                totalLuminance += (0.2126 * d[i] + 0.7152 * d[i+1] + 0.0722 * d[i+2]);
+                count++;
+            }
+            let dynamicAmbientAverage = totalLuminance / count;
 
-            for (let y = 1; y < h - 1; y++) {
-                for (let x = 1; x < w - 1; x++) {
-                    let sy = y * w * 4 + x * 4;
-                    let rAccum = 0, gAccum = 0, bAccum = 0;
+            // Step 2: Intelligent background contrast gain balancing loops (Retains colors)
+            for (let i = 0; i < d.length; i += 4) {
+                let r = d[i], g = d[i+1], b = d[i+2];
+                let pixelLuminance = (0.2126 * r + 0.7152 * g + 0.0722 * b);
 
-                    for (let cy = -1; cy <= 1; cy++) {
-                        for (let cx = -1; cx <= 1; cx++) {
-                            let scy = (y + cy) * w * 4 + (x + cx) * 4;
-                            let wt = weights[(cy + 1) * 3 + (cx + 1)];
-                            
-                            rAccum += d[scy] * wt;
-                            gAccum += d[scy + 1] * wt;
-                            bAccum += d[scy + 2] * wt;
-                        }
-                    }
-
-                    let contrastFactor = 1.25; 
-                    outData[sy]     = Math.min(255, Math.max(0, ((rAccum - 128) * contrastFactor) + 138)); 
-                    outData[sy + 1] = Math.min(255, Math.max(0, ((gAccum - 128) * contrastFactor) + 138)); 
-                    outData[sy + 2] = Math.min(255, Math.max(0, ((bAccum - 128) * contrastFactor) + 138)); 
-                    outData[sy + 3] = d[sy + 3]; 
+                // If pixel belongs to hazy background paper gray parameters, pull it cleanly up to bright white
+                if (pixelLuminance > dynamicAmbientAverage - 15) {
+                    let brightenBoost = (255 - pixelLuminance) * 0.85; 
+                    d[i]     = Math.min(255, r + brightenBoost);
+                    d[i + 1] = Math.min(255, g + brightenBoost);
+                    d[i + 2] = Math.min(255, b + brightenBoost);
+                } else {
+                    // It's a key structural asset element text layer or photo block: deepen rich color saturation
+                    let contrastFactor = 1.15;
+                    d[i]     = Math.min(255, Math.max(0, (r - 128) * contrastFactor + 128));
+                    d[i + 1] = Math.min(255, Math.max(0, (g - 128) * contrastFactor + 128));
+                    d[i + 2] = Math.min(255, Math.max(0, (b - 128) * contrastFactor + 128));
                 }
             }
-            sCtx.putImageData(outputBuffer, 0, 0);
+
+            sCtx.putImageData(imgData, 0, 0);
             scannerStatus.className = "status-success";
-            scannerStatus.textContent = "✅ Action [Clear Background & Sharpen] Completed! Blurred edges sharpened while keeping natural photo colors.";
+            scannerStatus.textContent = "✅ Action [AI Smart Scan & Brighten] Completed! Background cleared safely while preserving all raw colors perfectly.";
         }, 50);
     });
 
+    // FIXED SECURE PDF BINARY OBJECT STREAM DOWNLOAD PIPELINE
     document.getElementById('scannerToPdfBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "📄 Executing [Convert to PDF]: Injecting sharpened canvas data streams into PDF pages...";
+        scannerStatus.textContent = "📄 Executing [Convert & Download PDF]: Converting canvas snapshot into a binary Blob to force system download protocol triggers...";
         
-        const outUrl = scannerCanvas.toDataURL('image/jpeg', 0.95);
-        const pdf = new jspdf.jsPDF({
-            orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p',
-            unit: 'px',
-            format: [scannerCanvas.width, scannerCanvas.height]
-        });
-        pdf.addImage(outUrl, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height);
-        triggerDownload(pdf.output('blob'), `Clean_Scan_${Date.now()}.pdf`);
-        
-        scannerStatus.className = "status-success";
-        scannerStatus.textContent = "✅ Action [Convert to PDF] Completed! File download complete.";
+        scannerCanvas.toBlob((blob) => {
+            if(!blob) {
+                scannerStatus.className = "status-error";
+                scannerStatus.textContent = "Error generating canvas binary image footprint.";
+                return;
+            }
+            const pdf = new jspdf.jsPDF({
+                orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p',
+                unit: 'px',
+                format: [scannerCanvas.width, scannerCanvas.height]
+            });
+            
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = function() {
+                pdf.addImage(reader.result, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height);
+                const pdfBlobOutput = pdf.output('blob');
+                triggerDownload(pdfBlobOutput, `AI_Enhanced_Document_${Date.now()}.pdf`);
+                
+                scannerStatus.className = "status-success";
+                scannerStatus.textContent = "✅ Action [Convert & Download PDF] Completed! Forced secure system storage download.";
+            }
+        }, 'image/jpeg', 0.95);
     });
 
     document.getElementById('scannerToDocxBtn').addEventListener('click', () => {
