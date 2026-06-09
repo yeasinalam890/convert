@@ -206,30 +206,54 @@
             user-select: none;
         }
 
-        #status, #scannerStatus, #officeStatus {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 500;
-            white-space: pre-line;
+        /* Fullscreen Integrated MS Word Editor Overlays */
+        .office-fullscreen-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #f3f2f1;
+            z-index: 99999;
+            display: none;
+            flex-direction: column;
         }
+
+        .word-header {
+            background-color: #106ebe;
+            color: #ffffff;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .word-brand-row { display: flex; align-items: center; gap: 12px; }
+        .word-icon { font-weight: 900; background: #ffffff; color: #106ebe; padding: 4px 10px; border-radius: 4px; font-size: 16px; }
+        .word-title { font-size: 16px; font-weight: 600; color: #ffffff; }
         
-        .status-loading { color: var(--primary); }
-        .status-success { color: var(--success); }
-        .status-error { color: #dc2626; }
+        .ribbon-actions { display: flex; gap: 10px; }
+        .ribbon-actions button { background: #ffffff; color: #106ebe; border: 1px solid #ffffff; padding: 8px 18px; font-weight: 600; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; width: auto; }
+        .ribbon-actions button:hover { background: #f3f2f1; color: #0b5a9e; }
+        .ribbon-actions .btn-close { background: transparent; color: #ffffff; border-color: #ffffff; }
+        .ribbon-actions .btn-close:hover { background: rgba(255,255,255,0.1); color: #ffffff; }
 
-        .footer-banner {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #e5e7eb;
-            width: 100%;
-            max-width: 450px;
-            font-size: 14px;
-            color: #6b7280;
-        }
+        .word-option-ribbon { background: #ffffff; border-bottom: 1px solid #edebe9; padding: 6px 25px; display: flex; gap: 20px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow-x: auto; white-space: nowrap; }
+        .ribbon-group { display: flex; gap: 6px; border-right: 1px solid #edebe9; padding-right: 15px; align-items: center; }
+        .ribbon-group:last-child { border-right: none; }
+        
+        .opt-btn { background: transparent; border: none; color: #323130; padding: 6px 10px; font-size: 12px; font-weight: 500; border-radius: 3px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; width: auto; }
+        .opt-btn:hover { background: #f3f2f1; color: #201f1e; }
+        .opt-btn strong { font-size: 14px; color: #106ebe; }
 
-        .footer-banner a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .workspace-viewport { flex: 1; overflow: auto; padding: 35px 10px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; width: 100vw; }
+        .a4-paper-sheet { background: #ffffff; width: 100%; max-width: 816px; min-height: 1056px; padding: 50px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
+        th, td { border: 1px solid #4b5563; padding: 10px 6px; text-align: center; vertical-align: middle; word-break: break-all; font-size: 13px; outline: none; }
+        th { background-color: #106ebe; color: #ffffff; font-weight: 600; }
+        td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
     </style>
 </head>
 <body>
@@ -304,7 +328,7 @@
     <div class="office-container">
         <h2>3. Advanced Table & Document Grid Workspace</h2>
         <div class="drop-zone" id="officeDropZone">
-            <p>Drag & drop your formatted table / <strong>.docx file</strong> here to open in a new editing window</p>
+            <p>Drag & drop your formatted table / <strong>.docx file</strong> here to open editing canvas workspace</p>
             <input type="file" id="officeFileInput" style="display: none;" accept=".doc,.docx">
             <span id="officeFileName"></span>
         </div>
@@ -312,17 +336,44 @@
     </div>
 </div>
 
-<div class="footer-banner">
-    Contact Support: <a href="mailto:yeasinalam890@gmail.com">yeasinalam890@gmail.com</a>
+<div class="office-fullscreen-modal" id="officeModal">
+    <div class="word-header">
+        <div class="word-brand-row">
+            <span class="word-icon">W</span>
+            <span class="word-title" id="modalDocTitle">Microsoft Word Online Workspace</span>
+        </div>
+        <div class="ribbon-actions">
+            <button class="btn-close" id="modalCloseBtn">❌ Close Document</button>
+            <button id="modalPdfBtn">📄 Export PDF File Blueprint</button>
+        </div>
+    </div>
+
+    <div class="word-option-ribbon">
+        <div class="ribbon-group">
+            <button class="opt-btn" id="btnBold"><strong>B</strong>Bold Text</button>
+            <button class="opt-btn" id="btnItalic"><i>I</i>Italic Text</button>
+            <button class="opt-btn" id="btnUnderline"><u>U</u>Underline</button>
+        </div>
+        <div class="ribbon-group">
+            <button class="opt-btn" id="btnRowBelow">➕ Row Below</button>
+            <button class="opt-btn" id="btnDelRow">➖ Delete Row</button>
+        </div>
+        <div class="ribbon-group">
+            <button class="opt-btn" id="btnColAfter">📊 Add Column</button>
+            <button class="opt-btn" id="btnDelCol">🗑️ Delete Column</button>
+        </div>
+        <div class="ribbon-group">
+            <button class="opt-btn" id="btnLeftAlign">⬅️ Left Align</button>
+            <button class="opt-btn" id="btnCenterAlign">🔲 Center Align</button>
+        </div>
+    </div>
+
+    <div class="workspace-viewport">
+        <div class="a4-paper-sheet" contenteditable="true" id="editorCoreSheet" spellcheck="false"></div>
+    </div>
 </div>
 
 <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    let loadedDocBaseName = "Document Workspace";
-    let scannerImageObject = null;
-    let currentInputFileTotalSize = 0;
-
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
@@ -334,6 +385,15 @@
     const qualityVal = document.getElementById('qualityVal');
     const status = document.getElementById('status');
     const compressionEstimate = document.getElementById('compressionEstimate');
+
+    const officeDropZone = document.getElementById('officeDropZone');
+    const officeFileInput = document.getElementById('officeFileInput');
+    const officeFileName = document.getElementById('officeFileName');
+    const officeStatus = document.getElementById('officeStatus');
+
+    const officeModal = document.getElementById('officeModal');
+    const editorCoreSheet = document.getElementById('editorCoreSheet');
+    const modalDocTitle = document.getElementById('modalDocTitle');
 
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -393,7 +453,6 @@
 
     function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
-    function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
     function triggerDownload(urlOrBlobData, filename) {
         try {
@@ -404,31 +463,26 @@
                 a.href = urlOrBlobData;
             }
             a.download = filename;
-            a.target = '_blank'; 
             document.body.appendChild(a);
             a.click();
-            setTimeout(() => {
-                a.remove();
-                if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href);
-            }, 200);
+            setTimeout(() => { a.remove(); if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href); }, 200);
         } catch (err) {
             const targetDataStream = (urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData;
             window.open(targetDataStream, '_blank');
         }
     }
 
-    // HIGH-ACCURACY INVOICE & BILL TABLE STRUCTURAL DETECTOR
     function convertTextToStructuredHtml(rawText) {
         const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
         let htmlOutput = "";
         let tableRows = [];
         let infoBlocks = [];
 
+        const metadataRegex = /(name\s*:\s*|bill\s*no\s*:\s*|date\s*:\s*|address\s*:\s*|owner\s*name\s*:\s*|license\s*:\s*|bank\s*:\s*|email\s*:\s*|mobile\s*:\s*|tin\s*no\s*:\s*|biin\s*:\s*|e-tin\s*:\s*)/i;
+
         lines.forEach(line => {
-            // Isolate clean column values cleanly split by dynamic invoice boundaries
-            const cells = line.split(/[|│├┤┼║🛑\t]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0);
+            const cells = line.split(/[|│├┤┼║🛑\t,-]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0 && c !== '"');
             
-            // Check if this row represents structured tabular entries
             const isTableLine = cells.length > 1 && (
                 /^\d+$/.test(cells[0]) || 
                 /^\d+\.$/.test(cells[0]) ||
@@ -436,17 +490,19 @@
                 line.toLowerCase().includes("sl") || 
                 line.toLowerCase().includes("amount") ||
                 line.toLowerCase().includes("charge") ||
-                /^\d+[\d,.]*/.test(cells[cells.length - 1])
+                line.toLowerCase().includes("salary") ||
+                /^\d+[\d,.]*/.test(cells[cells.length - 1]) ||
+                cells[cells.length - 1].toLowerCase().includes("tk")
             );
 
             if (isTableLine) {
                 tableRows.push(cells);
-            } else if (line.includes(":") || line.toLowerCase().includes("bill no") || line.toLowerCase().includes("date")) {
+            } else if (metadataRegex.test(line) || line.includes(":")) {
                 infoBlocks.push(line);
             } else {
                 if (line.toLowerCase().includes("bill") || line.toUpperCase() === "BILL") {
                     htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; text-transform:uppercase; font-size:24px; font-weight:800; border:none; padding:0;">${line}</h2>`;
-                } else if(line.toLowerCase().includes("engineering") || line.toLowerCase().includes("maintenance") || line.toLowerCase().includes("office")) {
+                } else if(line.toLowerCase().includes("engineering") || line.toLowerCase().includes("maintenance") || line.toLowerCase().includes("office") || line.toLowerCase().includes("food") || line.toLowerCase().includes("bakery")) {
                     htmlOutput += `<h1 style="text-align:center; color:#1e3a8a; margin:5px 0; font-size:26px; text-transform:uppercase; font-weight:bold;">${line}</h1>`;
                 } else {
                     htmlOutput += `<p style="margin: 6px 0; text-align: left; font-size:14px; color:#1f2937;">${line}</p>`;
@@ -454,13 +510,12 @@
             }
         });
 
-        // Pack Meta Invoice Blocks Cleanly Side-By-Side (Matching image 1 layout)
         if (infoBlocks.length > 0) {
             htmlOutput += `<div style="margin: 20px 0; padding: 15px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size:14px; line-height:1.6;">`;
             infoBlocks.forEach(item => {
                 const parts = item.split(":");
                 if(parts.length >= 2) {
-                    htmlOutput += `<div><strong>${parts[0]}:</strong> ${parts.slice(1).join(":")}</div>`;
+                    htmlOutput += `<div><strong>${parts[0].trim()}:</strong> ${parts.slice(1).join(":").trim()}</div>`;
                 } else {
                     htmlOutput += `<div>${item}</div>`;
                 }
@@ -468,12 +523,11 @@
             htmlOutput += `</div>`;
         }
 
-        // Build the unified crisp blueprint table matrix grid
         if (tableRows.length > 0) {
             htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center;">`;
             
             tableRows.forEach((row) => {
-                const isHeader = row.some(cell => cell.toLowerCase().includes("sl") || cell.toLowerCase().includes("name") || cell.toLowerCase().includes("amount") || cell.toLowerCase().includes("tax"));
+                const isHeader = row.some(cell => cell.toLowerCase().includes("sl") || cell.toLowerCase().includes("name") || cell.toLowerCase().includes("amount") || cell.toLowerCase().includes("tax") || cell.toLowerCase().includes("charge"));
                 const isTotal = row.some(cell => cell.toLowerCase().includes("total"));
 
                 if (isHeader) {
@@ -483,7 +537,7 @@
                 } else if (isTotal) {
                     htmlOutput += `<tr style="font-weight: bold; background-color: #f0f4ff; color: #1e3a8a;">`;
                     if (row.length === 2) {
-                        htmlOutput += `<td colspan="3" style="padding: 12px 8px; border: 1px solid #4b5563; text-align: right; padding-right: 25px;">${row[0]}</td>`;
+                        htmlOutput += `<td colspan="2" style="padding: 12px 8px; border: 1px solid #4b5563; text-align: right; padding-right: 25px;">${row[0]}</td>`;
                         htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; font-size:15px; font-weight:bold;">${row[1]}</td>`;
                     } else {
                         row.forEach((cell, idx) => {
@@ -507,9 +561,7 @@
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files;
         if(!files.length) { alert('Upload files first.'); return; }
-        
-        status.className = "status-loading"; 
-        status.textContent = "⚙️ Processing layout parameters & loading text detectors...";
+        status.className = "status-loading"; status.textContent = "⚙️ Processing layouts and applying OCR engines...";
         let successCount = 0;
 
         for(let i=0; i<files.length; i++) {
@@ -523,45 +575,24 @@
                 if(targetFormat === 'docx') {
                     let extractedText = "";
                     if(fileExt === 'pdf') {
-                        status.textContent = "🔍 Reading PDF and extracting characters...";
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
                         for(let p=1; p<=pdf.numPages; p++) {
                             const page = await pdf.getPage(p);
-                            const textContent = await page.getTextContent();
-                            extractedText += textContent.items.map(item => item.str).join(' ') + "\n";
+                            extractedText += (await page.getTextContent()).items.map(item => item.str).join(' ') + "\n";
                         }
                     } else if(fileExt === 'docx' || fileExt === 'doc') {
-                        const resHtml = await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) });
-                        extractedText = resHtml.value.replace(/<[^>]*>/g, '\n');
+                        extractedText = (await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) })).value.replace(/<[^>]*>/g, '\n');
                     } else {
-                        status.textContent = "🧠 AI OCR Processing: Scanning blurry text and reconstructing rows...";
-                        const img = await loadImage(file);
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width; canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
-                        
-                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const d = imgData.data;
-                        for(let k=0; k<d.length; k+=4) {
-                            let brightness = (d[k] + d[k+1] + d[k+2])/3;
-                            let f = (brightness > 140) ? 255 : brightness * 0.4;
-                            d[k] = f; d[k+1] = f; d[k+2] = f;
-                        }
+                        const img = await loadImage(file); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+                        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+                        const imgData = ctx.getImageData(0, 0, cv.width, cv.height); const d = imgData.data;
+                        for(let k=0; k<d.length; k+=4) { let b = (d[k] + d[k+1] + d[k+2])/3; let f = (b > 140) ? 255 : b * 0.4; d[k] = f; d[k+1] = f; d[k+2] = f; }
                         ctx.putImageData(imgData, 0, 0);
-
-                        const ocrResult = await Tesseract.recognize(canvas, 'eng');
-                        extractedText += ocrResult.data.text;
+                        extractedText += (await Tesseract.recognize(cv, 'eng')).data.text;
                     }
-
                     const lines = extractedText.split('\n').filter(l => l.trim() !== '');
-                    const docParagraphs = lines.map(l => new docx.Paragraph({
-                        children: [new docx.TextRun({ text: l, font: "Segoe UI", size: 24 })],
-                        spacing: { after: 120 }
-                    }));
-
-                    const docBlob = await docx.Packer.toBlob(new docx.Document({ sections: [{ children: docParagraphs }] }));
-                    triggerDownload(docBlob, `${baseName}_converted.docx`);
+                    const docParagraphs = lines.map(l => new docx.Paragraph({ children: [new docx.TextRun({ text: l, font: "Segoe UI", size: 24 })], spacing: { after: 120 } }));
+                    triggerDownload(await docx.Packer.toBlob(new docx.Document({ sections: [{ children: docParagraphs }] })), `${baseName}_converted.docx`);
                     successCount++;
                 } else {
                     if(fileExt === 'pdf') {
@@ -582,8 +613,7 @@
                         } else {
                             const cv = document.createElement('canvas'); cv.width = 800; cv.height = 1000; const ctx = cv.getContext('2d');
                             ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000); ctx.fillStyle = "black"; ctx.font = "16px Arial";
-                            const lines = resHtml.value.replace(/<[^>]*>/g, '\n').split('\n').filter(l => l.trim() !== '');
-                            lines.forEach((l, idx) => ctx.fillText(l, 40, 50 + (idx * 25)));
+                            resHtml.value.replace(/<[^>]*>/g, '\n').split('\n').filter(l => l.trim() !== '').forEach((l, idx) => ctx.fillText(l, 40, 50 + (idx * 25)));
                             triggerDownload(cv.toDataURL(`image/${targetFormat}`, quality), `${baseName}_converted.${targetFormat}`);
                         }
                         successCount++;
@@ -615,7 +645,6 @@
     const scannerStatus = document.getElementById('scannerStatus');
     const scannerCanvas = document.getElementById('scannerCanvas');
     const sCtx = scannerCanvas.getContext('2d');
-
     let touchTimer = null;
 
     scannerDropZone.addEventListener('click', () => scannerFileInput.click());
@@ -628,122 +657,70 @@
     scannerFileInput.addEventListener('change', loadScannerImage);
 
     async function loadScannerImage() {
-        const file = scannerFileInput.files[0];
-        if(!file) return;
+        const file = scannerFileInput.files[0]; if(!file) return;
         scannerFileName.textContent = `Target File: ${file.name} (${formatBytes(file.size)})`;
         scannerWorkspace.style.display = "block";
-        
         scannerImageObject = await loadImage(file);
-        scannerCanvas.width = scannerImageObject.width;
-        scannerCanvas.height = scannerImageObject.height;
+        scannerCanvas.width = scannerImageObject.width; scannerCanvas.height = scannerImageObject.height;
         sCtx.drawImage(scannerImageObject, 0, 0);
-
-        scannerStatus.className = "status-success";
-        scannerStatus.textContent = "Photo loaded smoothly into canvas memory.";
+        scannerStatus.className = "status-success"; scannerStatus.textContent = "Photo loaded smoothly.";
         setupLongPressEngine();
     }
 
     function setupLongPressEngine() {
-        const startEvent = () => {
-            touchTimer = setTimeout(() => {
-                scannerStatus.className = "status-loading";
-                scannerStatus.textContent = "⏳ Long-press detected! Extracting snapshot data directly to storage...";
-                scannerCanvas.toBlob((blob) => {
-                    triggerDownload(blob, `AI_Enhanced_Scan_${Date.now()}.jpg`);
-                    scannerStatus.className = "status-success";
-                    scannerStatus.textContent = "✅ Downloaded successfully via long-press tool!";
-                }, 'image/jpeg', 0.95);
-            }, 2500); 
-        };
+        const startEvent = () => { touchTimer = setTimeout(() => { scannerCanvas.toBlob((b) => { triggerDownload(b, `AI_Enhanced_Scan_${Date.now()}.jpg`); }, 'image/jpeg', 0.95); }, 2500); };
         const cancelEvent = () => { if(touchTimer) clearTimeout(touchTimer); };
-
-        scannerCanvas.addEventListener('mousedown', startEvent);
-        scannerCanvas.addEventListener('mouseup', cancelEvent);
-        scannerCanvas.addEventListener('mouseleave', cancelEvent);
-        scannerCanvas.addEventListener('touchstart', startEvent, { passive: true });
+        scannerCanvas.addEventListener('mousedown', startEvent); scannerCanvas.addEventListener('mouseup', cancelEvent);
+        scannerCanvas.addEventListener('mouseleave', cancelEvent); scannerCanvas.addEventListener('touchstart', startEvent, { passive: true });
         scannerCanvas.addEventListener('touchend', cancelEvent);
     }
 
     document.getElementById('enhanceClearBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
-        scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "✨ Executing [AI Smart Scan & Brighten]: Balancing local exposure maps...";
-
+        scannerStatus.className = "status-loading"; scannerStatus.textContent = "✨ Balancing local exposure maps...";
         setTimeout(() => {
             sCtx.drawImage(scannerImageObject, 0, 0);
             const imgData = sCtx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
             const d = imgData.data; const w = imgData.width; const h = imgData.height;
-
             let totalLuminance = 0, count = 0, sampleRate = Math.round((w * h) / 1000) || 1;
-            for (let i = 0; i < d.length; i += 4 * sampleRate) {
-                totalLuminance += (0.2126 * d[i] + 0.7152 * d[i+1] + 0.0722 * d[i+2]);
-                count++;
-            }
+            for (let i = 0; i < d.length; i += 4 * sampleRate) { totalLuminance += (0.2126 * d[i] + 0.7152 * d[i+1] + 0.0722 * d[i+2]); count++; }
             let dynamicAmbientAverage = totalLuminance / count;
-
             for (let i = 0; i < d.length; i += 4) {
-                let r = d[i], g = d[i+1], b = d[i+2];
-                let pixelLuminance = (0.2126 * r + 0.7152 * g + 0.0722 * b);
-
+                let r = d[i], g = d[i+1], b = d[i+2]; let pixelLuminance = (0.2126 * r + 0.7152 * g + 0.0722 * b);
                 if (pixelLuminance > dynamicAmbientAverage - 15) {
-                    let brightenBoost = (255 - pixelLuminance) * 0.85; 
-                    d[i] = Math.min(255, r + brightenBoost); d[i + 1] = Math.min(255, g + brightenBoost); d[i + 2] = Math.min(255, b + brightenBoost);
+                    let brightenBoost = (255 - pixelLuminance) * 0.85; d[i] = Math.min(255, r + brightenBoost); d[i + 1] = Math.min(255, g + brightenBoost); d[i + 2] = Math.min(255, b + brightenBoost);
                 } else {
-                    let contrastFactor = 1.15;
-                    d[i] = Math.min(255, Math.max(0, (r - 128) * contrastFactor + 128));
-                    d[i + 1] = Math.min(255, Math.max(0, (g - 128) * contrastFactor + 128));
-                    d[i + 2] = Math.min(255, Math.max(0, (b - 128) * contrastFactor + 128));
+                    let contrastFactor = 1.15; d[i] = Math.min(255, Math.max(0, (r - 128) * contrastFactor + 128)); d[i + 1] = Math.min(255, Math.max(0, (g - 128) * contrastFactor + 128)); d[i + 2] = Math.min(255, Math.max(0, (b - 128) * contrastFactor + 128));
                 }
             }
             sCtx.putImageData(imgData, 0, 0);
-            scannerStatus.className = "status-success";
-            scannerStatus.textContent = "✅ Action [AI Smart Scan & Brighten] Completed!";
+            scannerStatus.className = "status-success"; scannerStatus.textContent = "✅ AI Smart Scan Completed!";
         }, 50);
     });
 
     document.getElementById('scannerToPdfBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
-        scannerStatus.className = "status-loading";
         scannerCanvas.toBlob((blob) => {
             const pdf = new jspdf.jsPDF({ orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p', unit: 'px', format: [scannerCanvas.width, scannerCanvas.height] });
             const reader = new FileReader(); reader.readAsDataURL(blob);
-            reader.onloadend = function() {
-                pdf.addImage(reader.result, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height);
-                triggerDownload(pdf.output('blob'), `AI_Enhanced_Scan_${Date.now()}.pdf`);
-                scannerStatus.className = "status-success"; scannerStatus.textContent = "✅ PDF Document downloaded successfully.";
-            }
+            reader.onloadend = function() { pdf.addImage(reader.result, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height); triggerDownload(pdf.output('blob'), `Scan_${Date.now()}.pdf`); }
         }, 'image/jpeg', 0.95);
     });
 
     document.getElementById('scannerToDocxBtn').addEventListener('click', async () => {
         if(!scannerImageObject) return;
-        scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "🧠 Running AI Layout Sync: Extracting pixels and structuring real MS Office Grid cells...";
-
+        scannerStatus.className = "status-loading"; scannerStatus.textContent = "🧠 Running OCR Core Engine Layer Sync...";
         try {
             const ocrResult = await Tesseract.recognize(scannerCanvas, 'eng');
             const structuredHtmlContent = convertTextToStructuredHtml(ocrResult.data.text);
-
-            const editorTabWindow = window.open("", "_blank");
-            editorTabWindow.document.write(generateStandaloneEditorPage(structuredHtmlContent, "AI Reconstructed Invoice"));
-            editorTabWindow.document.close();
-
-            scannerStatus.className = "status-success";
-            scannerStatus.textContent = "✅ Reconstructed matrix grid and launched inside a new browser workspace tab!";
-        } catch (err) {
-            scannerStatus.className = "status-error"; scannerStatus.textContent = "OCR extraction failed.";
-            console.error(err);
-        }
+            openFullscreenWorkspace("AI Reconstructed Matrix Document", structuredHtmlContent);
+            scannerStatus.className = "status-success"; scannerStatus.textContent = "✅ Sent to workspace successfully!";
+        } catch (err) { scannerStatus.className = "status-error"; console.error(err); }
     });
 
     // ==========================================
-    // SECTION 3: OPEN FILE INDEPENDENT NEW TAB 
+    // SECTION 3: OFFICE GATEWAY
     // ==========================================
-    const officeDropZone = document.getElementById('officeDropZone');
-    const officeFileInput = document.getElementById('officeFileInput');
-    const officeFileName = document.getElementById('officeFileName');
-    const officeStatus = document.getElementById('officeStatus');
-
     officeDropZone.addEventListener('click', () => officeFileInput.click());
     officeDropZone.addEventListener('dragover', (e) => { e.preventDefault(); officeDropZone.classList.add('drag-over'); });
     officeDropZone.addEventListener('dragleave', () => officeDropZone.classList.remove('drag-over'));
@@ -754,174 +731,80 @@
     officeFileInput.addEventListener('change', launchWordTabWindow);
 
     async function launchWordTabWindow() {
-        const file = officeFileInput.files[0];
-        if(!file) return;
-
+        const file = officeFileInput.files[0]; if(!file) return;
         loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        officeStatus.className = "status-loading";
-        officeStatus.textContent = "🔄 Parsing OpenXML document schemas... Launching workspace page...";
+        officeStatus.className = "status-loading"; officeStatus.textContent = "🔄 De-serializing OpenXML layout chains...";
 
         try {
             const buffer = await readFileAsBuffer(file);
             const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
             const structuredHtmlContent = convertTextToStructuredHtml(parseResult.value.replace(/<[^>]*>/g, '\n'));
+            
+            openFullscreenWorkspace(loadedDocBaseName, structuredHtmlContent);
+            officeStatus.className = "status-success"; officeStatus.textContent = "✅ Active Suite workspace synchronized.";
+        } catch(err) { officeStatus.className = "status-error"; console.error(err); }
+    }
 
-            const editorTab = window.open("", "_blank");
-            editorTab.document.write(generateStandaloneEditorPage(structuredHtmlContent, loadedDocBaseName));
-            editorTab.document.close();
+    // INTERACTIVE OVERLAY WORKSPACE HANDLERS
+    function openFullscreenWorkspace(title, htmlContent) {
+        modalDocTitle.textContent = `${title} - Microsoft Word Online`;
+        editorCoreSheet.innerHTML = htmlContent;
+        officeModal.style.display = "flex";
+        document.body.style.overflow = "hidden"; // Freeze background window scrolling
+    }
 
-            officeStatus.className = "status-success";
-            officeStatus.textContent = "✅ Workspace opened inside a new tab view!";
-        } catch(err) {
-            officeStatus.className = "status-error"; officeStatus.textContent = "Failed to open window workspace target.";
-            console.error(err);
+    document.getElementById('modalCloseBtn').addEventListener('click', () => {
+        officeModal.style.display = "none";
+        document.body.style.overflow = "auto";
+    });
+
+    // Ribbon Command Actions Mapping
+    function execCmd(command) {
+        document.execCommand(command, false, null);
+        editorCoreSheet.focus();
+    }
+    document.getElementById('btnBold').addEventListener('click', () => execCmd('bold'));
+    document.getElementById('btnItalic').addEventListener('click', () => execCmd('italic'));
+    document.getElementById('btnUnderline').addEventListener('click', () => execCmd('underline'));
+    document.getElementById('btnLeftAlign').addEventListener('click', () => execCmd('justifyLeft'));
+    document.getElementById('btnCenterAlign').addEventListener('click', () => execCmd('justifyCenter'));
+
+    // Dynamic Grid Modifiers
+    function modifyTable(action) {
+        const selection = window.getSelection(); if (!selection.rangeCount) return;
+        let cell = selection.anchorNode;
+        while (cell && cell.nodeName !== 'TD' && cell.nodeName !== 'TH') { cell = cell.parentNode; }
+        if (!cell) { alert("Click inside a grid block to append structures."); return; }
+        
+        const row = cell.parentNode; const table = row.parentNode; const cellIndex = cell.cellIndex;
+        if (action === 'insertRowAfter') {
+            const newRow = row.cloneNode(true); Array.from(newRow.cells).forEach(c => c.innerHTML = "&nbsp;");
+            row.parentNode.insertBefore(newRow, row.nextSibling);
+        } else if (action === 'deleteRow') {
+            if (table.rows.length > 1) row.remove();
+        } else if (action === 'insertColAfter') {
+            Array.from(table.rows).forEach(r => { const nc = r.cells[cellIndex].cloneNode(true); nc.innerHTML = "&nbsp;"; r.insertBefore(nc, r.cells[cellIndex].nextSibling); });
+        } else if (action === 'deleteCol') {
+            if (row.cells.length > 1) Array.from(table.rows).forEach(r => r.cells[cellIndex].remove());
         }
     }
+    document.getElementById('btnRowBelow').addEventListener('click', () => modifyTable('insertRowAfter'));
+    document.getElementById('btnDelRow').addEventListener('click', () => modifyTable('deleteRow'));
+    document.getElementById('btnColAfter').addEventListener('click', () => modifyTable('insertColAfter'));
+    document.getElementById('btnDelCol').addEventListener('click', () => modifyTable('deleteCol'));
 
-    // NATIVE-RENDERING SYSTEM ARCHITECTURE (ELIMINATES BLANK/CRASHED MOBILE PDF EXPORTS)
-    function generateStandaloneEditorPage(innerHtmlText, filename) {
-        return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <title>Microsoft Word Online Workspace - ${filename}</title>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
-            <style>
-                body { margin: 0; background-color: #f3f2f1; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-                .word-header { background-color: #106ebe; color: #ffffff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100; }
-                .word-brand-row { display: flex; align-items: center; gap: 12px; }
-                .word-icon { font-weight: 900; background: #ffffff; color: #106ebe; padding: 4px 10px; border-radius: 4px; font-size: 16px; }
-                .word-title { font-size: 16px; font-weight: 600; color: #ffffff; }
-                .ribbon-actions { display: flex; gap: 10px; }
-                .ribbon-actions button { background: #ffffff; color: #106ebe; border: 1px solid #ffffff; padding: 8px 18px; font-weight: 600; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
-                .ribbon-actions button:hover { background: #f3f2f1; color: #0b5a9e; }
-                .ribbon-actions .btn-close { background: transparent; color: #ffffff; border-color: #ffffff; }
-                .ribbon-actions .btn-close:hover { background: rgba(255,255,255,0.1); color: #ffffff; }
-                .word-option-ribbon { background: #ffffff; border-bottom: 1px solid #edebe9; padding: 6px 25px; display: flex; gap: 20px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-                .ribbon-group { display: flex; gap: 6px; border-right: 1px solid #edebe9; padding-right: 15px; align-items: center; }
-                .ribbon-group:last-child { border-right: none; }
-                .opt-btn { background: transparent; border: none; color: #323130; padding: 6px 10px; font-size: 12px; font-weight: 500; border-radius: 3px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-                .opt-btn:hover { background: #f3f2f1; color: #201f1e; }
-                .opt-btn strong { font-size: 14px; color: #106ebe; }
-                .workspace-viewport { flex: 1; overflow: auto; padding: 35px 10px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
-                .a4-paper-sheet { background: #ffffff; width: 816px; min-height: 1056px; padding: 60px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
-                th, td { border: 1px solid #4b5563; padding: 10px 6px; text-align: center; vertical-align: middle; word-break: break-word; font-size: 13px; outline: none; }
-                th { background-color: #106ebe; font-weight: 600; color: #ffffff; }
-                td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
-            </style>
-        </head>
-        <body>
-            <div class="word-header">
-                <div class="word-brand-row">
-                    <span class="word-icon">W</span>
-                    <span class="word-title">${filename} - Microsoft Word Online</span>
-                </div>
-                <div class="ribbon-actions">
-                    <button class="btn-close" onclick="window.close()">❌ Close Document</button>
-                    <button onclick="exportDocumentAsPdf()">📄 Export PDF File Blueprint</button>
-                </div>
-            </div>
-
-            <div class="word-option-ribbon">
-                <div class="ribbon-group">
-                    <button class="opt-btn" onclick="execCommand('bold')"><strong>B</strong>Bold Text</button>
-                    <button class="opt-btn" onclick="execCommand('italic')"><i>I</i>Italic Text</button>
-                    <button class="opt-btn" onclick="execCommand('underline')"><u>U</u>Underline</button>
-                </div>
-                <div class="ribbon-group">
-                    <button class="opt-btn" onclick="modifyTable('insertRowAfter')">➕ Row Below</button>
-                    <button class="opt-btn" onclick="modifyTable('deleteRow')">➖ Delete Row</button>
-                </div>
-                <div class="ribbon-group">
-                    <button class="opt-btn" onclick="modifyTable('insertColAfter')">📊 Add Column</button>
-                    <button class="opt-btn" onclick="modifyTable('deleteCol')">🗑️ Delete Column</button>
-                </div>
-                <div class="ribbon-group">
-                    <button class="opt-btn" onclick="execCommand('justifyLeft')">⬅️ Left Align</button>
-                    <button class="opt-btn" onclick="execCommand('justifyCenter')">🔲 Center Align</button>
-                </div>
-            </div>
-
-            <div class="workspace-viewport">
-                <div class="a4-paper-sheet" contenteditable="true" id="editorCoreSheet" spellcheck="false">
-                    ${innerHtmlText}
-                </div>
-            </div>
-
-            <script>
-                function execCommand(type) {
-                    document.execCommand(type, false, null);
-                    document.getElementById('editorCoreSheet').focus();
-                }
-
-                function modifyTable(action) {
-                    const selection = window.getSelection();
-                    if (!selection.rangeCount) return;
-                    
-                    let targetCell = selection.anchorNode;
-                    while (targetCell && targetCell.nodeName !== 'TD' && targetCell.nodeName !== 'TH') {
-                        targetCell = targetCell.parentNode;
-                    }
-                    if (!targetCell) { alert("Please click inside a table cell to add or remove items."); return; }
-
-                    const row = targetCell.parentNode;
-                    const table = row.parentNode;
-                    const cellIndex = targetCell.cellIndex;
-
-                    if (action === 'insertRowAfter') {
-                        const newRow = row.cloneNode(true);
-                        Array.from(newRow.cells).forEach(cell => cell.innerHTML = "&nbsp;");
-                        row.parentNode.insertBefore(newRow, row.nextSibling);
-                    } 
-                    else if (action === 'deleteRow') {
-                        if (table.rows.length > 1) row.remove();
-                    } 
-                    else if (action === 'insertColAfter') {
-                        Array.from(table.rows).forEach(r => {
-                            const newCell = r.cells[cellIndex].cloneNode(true);
-                            newCell.innerHTML = "&nbsp;";
-                            r.insertBefore(newCell, r.cells[cellIndex].nextSibling);
-                        });
-                    } 
-                    else if (action === 'deleteCol') {
-                        if (row.cells.length > 1) {
-                            Array.from(table.rows).forEach(r => r.cells[cellIndex].remove());
-                        }
-                    }
-                }
-
-                // FIXED EXPERT EXPORT SYSTEM: Renders clean vectors directly to mobile storage files
-                function exportDocumentAsPdf() {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-                    const element = document.getElementById('editorCoreSheet');
-                    
-                    // Native HTML canvas element layout mapping
-                    doc.html(element, {
-                        x: 20,
-                        y: 20,
-                        width: 550, 
-                        windowWidth: 816,
-                        callback: function(pdfInstance) {
-                            // Compiles document as binary Blob snapshot object bypassing browser blockades
-                            const pdfBlobOutput = pdfInstance.output('blob');
-                            const a = document.createElement('a');
-                            a.href = URL.createObjectURL(pdfBlobOutput);
-                            a.download = "${filename}_Edited_Suite.pdf";
-                            a.target = '_blank';
-                            document.body.appendChild(a);
-                            a.click();
-                            setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 250);
-                        }
-                    });
-                }
-            <\/script>
-        </body>
-        </html>
-        `;
-    }
+    // Secure Embedded PDF Canvas Printer Linkage Execution
+    document.getElementById('modalPdfBtn').addEventListener('click', () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        
+        doc.html(editorCoreSheet, {
+            x: 20, y: 20, width: 550, windowWidth: 816,
+            callback: function(pdfInstance) {
+                triggerDownload(pdfInstance.output('blob'), `Edited_Office_Snapshot_${Date.now()}.pdf`);
+            }
+        });
+    });
 </script>
 </body>
 </html>
