@@ -393,7 +393,6 @@
 
     function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
-    function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
     function triggerDownload(urlOrBlobData, filename) {
         try {
@@ -417,21 +416,17 @@
         }
     }
 
-    // ADVANCED ADAPTIVE DYNAMIC STRUCTURAL GENERATOR
     function convertTextToStructuredHtml(rawText) {
         const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
         let htmlOutput = "";
         let tableRows = [];
         let metadataBlocks = [];
 
-        // Advanced Regex Maps matching Bill/Invoice metadata blocks
         const metadataRegex = /(name\s*:\s*|bill\s*no\s*:\s*|date\s*:\s*|address\s*:\s*|owner\s*name\s*:\s*|license\s*:\s*|bank\s*:\s*|email\s*:\s*|mobile\s*:\s*)/i;
 
         lines.forEach(line => {
-            // Isolate Document Layout Header/Footer properties from Grid Tables data elements
             const cells = line.split(/[|│\t]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0);
             
-            // Check if this row represents structured tabular entries
             const isTableLine = cells.length > 1 && (
                 /^\d+$/.test(cells[0]) || 
                 line.toLowerCase().includes("total") || 
@@ -446,7 +441,6 @@
             } else if (metadataRegex.test(line)) {
                 metadataBlocks.push(line);
             } else {
-                // Standalone textual formatting blocks
                 if (line.toLowerCase().includes("bill") || line.toUpperCase() === "BILL") {
                     htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; text-transform:uppercase; font-size:24px; font-weight:800; border:none; padding:0;">${line}</h2>`;
                 } else if(line.toLowerCase().includes("engineering") || line.toLowerCase().includes("maintenance")) {
@@ -457,7 +451,6 @@
             }
         });
 
-        // Compile extracted metadata elements cleanly into side-by-side informational cells
         if (metadataBlocks.length > 0) {
             htmlOutput += `<div style="margin: 20px 0; padding: 12px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size:13.5px; line-height:1.6;">`;
             metadataBlocks.forEach(item => {
@@ -466,7 +459,6 @@
             htmlOutput += `</div>`;
         }
 
-        // Build the unified table grid matrix
         if (tableRows.length > 0) {
             htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">`;
             
@@ -777,9 +769,6 @@
         }
     }
 
-    // =========================================================================
-    // MS WORD ONLINE & SEJDA PDF FULLSCREEN INTERACTIVE FRAME TEMPLATE COMPILER
-    // =========================================================================
     function generateStandaloneEditorPage(innerHtmlText, filename) {
         return `
         <!DOCTYPE html>
@@ -790,38 +779,26 @@
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
             <style>
                 body { margin: 0; background-color: #f3f2f1; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-                
-                /* MS Word Blue Ribbon Header Design */
                 .word-header { background-color: #106ebe; color: #ffffff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100; }
                 .word-brand-row { display: flex; align-items: center; gap: 12px; }
                 .word-icon { font-weight: 900; background: #ffffff; color: #106ebe; padding: 4px 10px; border-radius: 4px; font-size: 16px; }
                 .word-title { font-size: 16px; font-weight: 600; color: #ffffff; }
-                
                 .ribbon-actions { display: flex; gap: 10px; }
                 .ribbon-actions button { background: #ffffff; color: #106ebe; border: 1px solid #ffffff; padding: 8px 18px; font-weight: 600; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
                 .ribbon-actions button:hover { background: #f3f2f1; color: #0b5a9e; }
                 .ribbon-actions .btn-close { background: transparent; color: #ffffff; border-color: #ffffff; }
                 .ribbon-actions .btn-close:hover { background: rgba(255,255,255,0.1); color: #ffffff; }
-
-                /* MS Word Grid Option Ribbon Panels */
                 .word-option-ribbon { background: #ffffff; border-bottom: 1px solid #edebe9; padding: 6px 25px; display: flex; gap: 20px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
                 .ribbon-group { display: flex; gap: 6px; border-right: 1px solid #edebe9; padding-right: 15px; align-items: center; }
                 .ribbon-group:last-child { border-right: none; }
                 .opt-btn { background: transparent; border: none; color: #323130; padding: 6px 10px; font-size: 12px; font-weight: 500; border-radius: 3px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
                 .opt-btn:hover { background: #f3f2f1; color: #201f1e; }
                 .opt-btn strong { font-size: 14px; color: #106ebe; }
-
-                /* Workspace Layout Viewport */
                 .workspace-viewport { flex: 1; overflow: auto; padding: 35px 10px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
-                
-                /* Perfect MS Word A4 Canvas Alignment Blueprint Paper Frame */
                 .a4-paper-sheet { background: #ffffff; width: 816px; min-height: 1056px; padding: 60px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
-                
-                /* Structured Grid Table Properties matching invoice frames */
                 table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
                 th, td { border: 1px solid #4b5563; padding: 10px 6px; text-align: center; vertical-align: middle; word-break: break-word; font-size: 13px; outline: none; }
                 th { background-color: #106ebe; font-weight: 600; color: #ffffff; }
-                
                 td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
             </style>
         </head>
@@ -905,11 +882,8 @@
                     }
                 }
 
-                // ADVANCED HIGH-FIDELITY MOBILE MOBILE-FRIENDLY PDF EXPORT ENCAPSULATION
                 function exportDocumentAsPdf() {
                     const element = document.getElementById('editorCoreSheet');
-                    
-                    // Configuration profiles maximizing table cross-platform view stability
                     const options = {
                         margin:       [30, 30, 30, 30],
                         filename:     '${filename}_Edited_Document.pdf',
@@ -917,8 +891,6 @@
                         html2canvas:  { scale: 2, useCORS: true, logging: false },
                         jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
                     };
-                    
-                    // Stream direct system storage download arrays
                     html2pdf().set(options).from(element).save();
                 }
             <\/script>
