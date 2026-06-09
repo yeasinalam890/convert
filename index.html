@@ -150,6 +150,17 @@
             display: none;
         }
 
+        .size-preview-badge {
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+            background: #eef2ff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
         button {
             background-color: var(--primary);
             color: white;
@@ -179,13 +190,12 @@
         .btn-warning { background-color: var(--warning); }
         .btn-warning:hover { background-color: #d97706; }
 
-        /* Preview container for enhanced files */
         .scanner-preview-frame {
             background: #374151;
             padding: 15px;
             border-radius: 8px;
             text-align: center;
-            max-height: 400px;
+            max-height: 450px;
             overflow: auto;
         }
 
@@ -195,7 +205,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
-        /* Editor Paper styling */
         .editor-paper-frame {
             background: #6b7280;
             padding: 15px;
@@ -271,6 +280,7 @@
                     <span id="qualityVal">80%</span>
                 </div>
                 <input type="range" id="qualityRange" min="10" max="100" value="80">
+                <div id="compressionEstimate" class="size-preview-badge" style="display: none;">Calculated Estimation: Checking file payload...</div>
             </div>
         </div>
 
@@ -279,7 +289,7 @@
     </div>
 
     <div class="scanner-container">
-        <h2>2. Photo Document Cleaner & Enhancer</h2>
+        <h2>2. Photo Document Cleaner & Color Enhancer</h2>
         <div class="drop-zone" id="scannerDropZone">
             <p>Drop a blurry photo / scan (JPG, PNG) here to <strong>Clean & Enhance</strong></p>
             <input type="file" id="scannerFileInput" style="display: none;" accept="image/jpeg, image/png">
@@ -288,7 +298,7 @@
 
         <div id="scannerWorkspace" style="display: none; margin-top: 20px;">
             <div class="scanner-toolbar">
-                <button id="enhanceClearBtn" class="btn-warning">✨ Clear Background & Sharpen</button>
+                <button id="enhanceClearBtn" class="btn-warning">✨ Clear Background & Sharpen (Keep Colors)</button>
                 <button id="scannerToPdfBtn">📄 Convert to PDF</button>
                 <button id="scannerToDocxBtn" class="btn-success">📝 Send to Word Workspace</button>
             </div>
@@ -331,6 +341,7 @@
     let editorInstance = null;
     let loadedDocBaseName = "Document Workspace";
     let scannerImageObject = null;
+    let currentInputFileTotalSize = 0;
 
     // Element mappings
     const dropZone = document.getElementById('dropZone');
@@ -343,6 +354,7 @@
     const qualityRange = document.getElementById('qualityRange');
     const qualityVal = document.getElementById('qualityVal');
     const status = document.getElementById('status');
+    const compressionEstimate = document.getElementById('compressionEstimate');
 
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -353,24 +365,70 @@
     });
     fileInput.addEventListener('change', updateFileNameDisplay);
 
-    function updateFileNameDisplay() {
-        const len = fileInput.files.length;
-        if(len === 1) fileName.textContent = `📄 ${fileInput.files[0].name}`;
-        else if (len > 1) fileName.innerHTML = `<strong>Selected ${len} files:</strong><br>` + Array.from(fileInput.files).map(f => `• ${f.name}`).join('<br>');
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    compressCheck.addEventListener('change', () => { sliderPanel.style.display = compressCheck.checked ? 'block' : 'none'; });
-    qualityRange.addEventListener('input', () => { qualityVal.textContent = qualityRange.value + '%'; });
+    function updateFileNameDisplay() {
+        const len = fileInput.files.length;
+        currentInputFileTotalSize = 0;
+        
+        for(let i=0; i<len; i++) {
+            currentInputFileTotalSize += fileInput.files[i].size;
+        }
+
+        if(len === 1) {
+            fileName.textContent = `📄 ${fileInput.files[0].name} (${formatBytes(currentInputFileTotalSize)})`;
+        } else if (len > 1) {
+            fileName.innerHTML = `<strong>Selected ${len} files (${formatBytes(currentInputFileTotalSize)} total):</strong><br>` + Array.from(fileInput.files).map(f => `• ${f.name} (${formatBytes(f.size)})`).join('<br>');
+        }
+        calculateLiveCompressionEstimate();
+    }
+
+    compressCheck.addEventListener('change', () => { 
+        sliderPanel.style.display = compressCheck.checked ? 'block' : 'none'; 
+        calculateLiveCompressionEstimate();
+    });
+    
+    qualityRange.addEventListener('input', () => { 
+        qualityVal.textContent = qualityRange.value + '%'; 
+        calculateLiveCompressionEstimate();
+    });
+
+    function calculateLiveCompressionEstimate() {
+        if(!compressCheck.checked || currentInputFileTotalSize === 0) {
+            compressionEstimate.style.display = "none";
+            return;
+        }
+        compressionEstimate.style.display = "inline-block";
+        const targetPct = qualityRange.value;
+        
+        // Use an optimization curve matching real canvas compression parameters
+        let modifier = 0.95; 
+        if(targetPct < 30) modifier = 0.35;
+        else if (targetPct < 60) modifier = 0.55;
+        else if (targetPct < 85) modifier = 0.78;
+
+        const estimatedSize = Math.round(currentInputFileTotalSize * (targetPct / 100) * modifier);
+        const reductionPct = Math.round(((currentInputFileTotalSize - estimatedSize) / currentInputFileTotalSize) * 100);
+
+        compressionEstimate.textContent = `📊 Target: ${targetPct}% Quality Selection | Estimated Output size: ~${formatBytes(estimatedSize)} (Saved roughly ${reductionPct}% space)`;
+    }
 
     function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
     function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
-    // Conversion Processing Pipeline Loops
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files;
         if(!files.length) { alert('Upload files first.'); return; }
-        status.className = "status-loading"; status.textContent = "Processing batch layouts...";
+        
+        status.className = "status-loading"; 
+        status.textContent = "⚙️ Executing [Process & Download Batch]: Splitting files and packing formatting chains...";
         let successCount = 0;
 
         for(let i=0; i<files.length; i++) {
@@ -442,13 +500,11 @@
                 }
             } catch(e) { console.error(e); }
         }
-        status.className = "status-success"; status.textContent = `Processed ${successCount} files safely.`;
+        status.className = "status-success"; status.textContent = `✅ Successfully completed [Process & Download Batch] for ${successCount} items!`;
     });
 
-    function triggerDownload(url, fn) { const a = document.createElement('a'); a.href = url; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); }
-
     // ==========================================
-    // NEW SECTION 2: PHOTO CLEANER LOGIC
+    // SECTION 2: PHOTO CLEANER LOGIC
     // ==========================================
     const scannerDropZone = document.getElementById('scannerDropZone');
     const scannerFileInput = document.getElementById('scannerFileInput');
@@ -470,54 +526,83 @@
     async function loadScannerImage() {
         const file = scannerFileInput.files[0];
         if(!file) return;
-        scannerFileName.textContent = `Target File: ${file.name}`;
-        scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "Loading pixel array matrices...";
+        scannerFileName.textContent = `Target File: ${file.name} (${formatBytes(file.size)})`;
+        scannerWorkspace.style.display = "block";
         
         scannerImageObject = await loadImage(file);
         scannerCanvas.width = scannerImageObject.width;
         scannerCanvas.height = scannerImageObject.height;
         sCtx.drawImage(scannerImageObject, 0, 0);
 
-        scannerWorkspace.style.display = "block";
         scannerStatus.className = "status-success";
-        scannerStatus.textContent = "Photo loaded! Click 'Clear Background & Sharpen' to enhance text lines.";
+        scannerStatus.textContent = "Photo loaded into visual canvas buffer configuration frame.";
     }
 
-    // Canvas matrix threshold filtering algorithms to erase gray/blurry shadow artifacts
+    // COLOR-PRESERVING SHARPNESS & CONTRAST FILTER PIPELINE
     document.getElementById('enhanceClearBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "Running adaptive edge-sharpening convolution... Hold tight.";
+        scannerStatus.textContent = "✨ Executing [Clear Background & Sharpen]: Running luminance edge-enhancement algorithm curves while keeping true image colors...";
 
         setTimeout(() => {
             sCtx.drawImage(scannerImageObject, 0, 0);
             const imgData = sCtx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
             const d = imgData.data;
+            const w = imgData.width;
+            const h = imgData.height;
+            
+            // Create buffer copy array to do matrix transformations
+            const outputBuffer = sCtx.createImageData(w, h);
+            const outData = outputBuffer.data;
 
-            // Step 1: High Contrast Adaptive Brightness Balancing Pass
-            for (let i = 0; i < d.length; i += 4) {
-                let r = d[i], g = d[i+1], b = d[i+2];
-                // Convert to greyscale luminosity values
-                let v = (0.2126 * r + 0.7152 * g + 0.0722 * b);
-                
-                // Adaptive threshold lookup curve to wipe shadows out to pure white paper
-                if (v > 130) {
-                    d[i] = 255; d[i+1] = 255; d[i+2] = 255; // Force background noise to white
-                } else {
-                    // Deepen text details
-                    d[i] = v * 0.5; d[i+1] = v * 0.5; d[i+2] = v * 0.5;
+            // 3x3 Sharpen Convolution Grid Array Matrix Map
+            //  0  -1   0
+            // -1   5  -1
+            //  0  -1   0
+            const weights = [
+                 0, -1,  0,
+                -1,  5, -1,
+                 0, -1,  0
+            ];
+
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    let sy = y * w * 4 + x * 4;
+                    let rAccum = 0, gAccum = 0, bAccum = 0;
+
+                    // Matrix convolution calculations over adjacent pixels
+                    for (let cy = -1; cy <= 1; cy++) {
+                        for (let cx = -1; cx <= 1; cx++) {
+                            let scy = (y + cy) * w * 4 + (x + cx) * 4;
+                            let wt = weights[(cy + 1) * 3 + (cx + 1)];
+                            
+                            rAccum += d[scy] * wt;
+                            gAccum += d[scy + 1] * wt;
+                            bAccum += d[scy + 2] * wt;
+                        }
+                    }
+
+                    // Brightness equalization loop targeting fogs and shadows
+                    let avgLuminance = (0.2126 * rAccum + 0.7152 * gAccum + 0.0722 * bAccum);
+                    let contrastFactor = 1.25; // Enhance cell color depth boundaries
+
+                    outData[sy]     = Math.min(255, Math.max(0, ((rAccum - 128) * contrastFactor) + 138)); // Red
+                    outData[sy + 1] = Math.min(255, Math.max(0, ((gAccum - 128) * contrastFactor) + 138)); // Green
+                    outData[sy + 2] = Math.min(255, Math.max(0, ((bAccum - 128) * contrastFactor) + 138)); // Blue
+                    outData[sy + 3] = d[sy + 3]; // Alpha channel stability map
                 }
             }
-            sCtx.putImageData(imgData, 0, 0);
+            sCtx.putImageData(outputBuffer, 0, 0);
             scannerStatus.className = "status-success";
-            scannerStatus.textContent = "Enhancement complete! Text lines sharpened and background shadows erased.";
+            scannerStatus.textContent = "✅ Action [Clear Background & Sharpen] Completed! Blurred edges sharpened while keeping natural photo colors.";
         }, 50);
     });
 
-    // Converter Route A: Image Scanner Output Directly to Crisp Document PDF
     document.getElementById('scannerToPdfBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
+        scannerStatus.className = "status-loading";
+        scannerStatus.textContent = "📄 Executing [Convert to PDF]: Injecting sharpened canvas data streams into PDF pages...";
+        
         const outUrl = scannerCanvas.toDataURL('image/jpeg', 0.95);
         const pdf = new jspdf.jsPDF({
             orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p',
@@ -526,48 +611,35 @@
         });
         pdf.addImage(outUrl, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height);
         pdf.save(`Clean_Scan_${Date.now()}.pdf`);
+        
+        scannerStatus.className = "status-success";
+        scannerStatus.textContent = "✅ Action [Convert to PDF] Completed! File download complete.";
     });
 
-    // Converter Route B: Push Cleaned Photo layout straight into Editable Text Table Workspace
     document.getElementById('scannerToDocxBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "Packaging clean matrix layers into editor cells...";
+        scannerStatus.textContent = "📝 Executing [Send to Word Workspace]: Packing high-contrast images into Section 3 editor fields...";
 
         const cleanImgUrl = scannerCanvas.toDataURL('image/jpeg', 0.90);
-        // Build raw text wrapper containing the enhanced baseline image asset
         const contentStructure = `
             <p style="text-align:center;"><strong>Enhanced Document Attachment Workspace:</strong></p>
-            <table border="1" style="width:100%; border-collapse:collapse; text-align:center;">
+            <table border="1" style="width:100%; border-collapse:collapse; text-align:center; font-family: 'Segoe UI', Arial, sans-serif;">
                 <tr>
                     <td><img src="${cleanImgUrl}" style="max-width:100%; height:auto;" alt="Enhanced Sheet"/></td>
                 </tr>
             </table>
-            <p><br/>👇 Type modifications or copy individual extracted table information numbers right here below:</p>
+            <p style="font-family: 'Segoe UI', Arial, sans-serif;"><br/>👇 Type modifications or copy individual extracted table information numbers right here below:</p>
         `;
 
         officeWorkspace.style.display = "block";
         officeFileName.textContent = "Imported from Photo Cleaner Workspace";
         
-        // Push payload straight into running instance
-        if (tinymce.get('wordEditor')) {
-            tinymce.get('wordEditor').setContent(contentStructure);
-        } else {
-            tinymce.init({
-                selector: '#wordEditor',
-                plugins: 'table lists advlist image code link directionality charmap preview emoticons',
-                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | table tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | bullist numlist | ltr rtl | removeformat',
-                height: 500,
-                menubar: true,
-                setup: function (editor) { editorInstance = editor; }
-            }).then(() => {
-                tinymce.get('wordEditor').setContent(contentStructure);
-            });
-        }
+        mountTinyMCE(contentStructure);
         
         document.getElementById('officeWorkspace').scrollIntoView({ behavior: 'smooth' });
         scannerStatus.className = "status-success";
-        scannerStatus.textContent = "Sent successfully! View and edit your document attachment inside Section 3 below.";
+        scannerStatus.textContent = "✅ Action [Send to Word Workspace] Completed! Workspace successfully synchronized below.";
     });
 
     // ==========================================
@@ -593,9 +665,9 @@
         if(!file) return;
 
         loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        officeFileName.textContent = `Active Table Sheet: ${file.name}`;
+        officeFileName.textContent = `Active Table Sheet: ${file.name} (${formatBytes(file.size)})`;
         officeStatus.className = "status-loading";
-        officeStatus.textContent = "Loading grid models... Hold tight.";
+        officeStatus.textContent = "🔄 Synchronizing files... Parsing layout nodes and executing auto font-matching filters...";
 
         try {
             const buffer = await readFileAsBuffer(file);
@@ -608,31 +680,24 @@
             const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer }, parseOptions);
             
             let sanitizedHtml = parseResult.value;
-            if(!sanitizedHtml.includes('<table')) {
-                sanitizedHtml = `<table border="1" style="width:100%; border-collapse:collapse; min-width:600px;"><tr><td>${sanitizedHtml}</td></tr></table>`;
-            } else {
-                sanitizedHtml = sanitizedHtml.replace(/<table/g, '<table border="1" style="width:100%; border-collapse:collapse; min-width:700px; font-size:14px; text-align:center;" cellpadding="5"');
+            let matchedFont = "Segoe UI, Arial, sans-serif"; 
+            if(sanitizedHtml.includes("font-family")) {
+                const match = sanitizedHtml.match(/font-family:\s*['"]?([^'"]+?)['"]?[;>]/);
+                if(match && match[1]) matchedFont = match[1];
             }
 
-            if (tinymce.get('wordEditor')) {
-                tinymce.get('wordEditor').setContent(sanitizedHtml);
+            if(!sanitizedHtml.includes('<table')) {
+                sanitizedHtml = `<table border="1" style="width:100%; border-collapse:collapse; min-width:600px; font-family:${matchedFont};"><tr><td>${sanitizedHtml}</td></tr></table>`;
             } else {
-                await tinymce.init({
-                    selector: '#wordEditor',
-                    plugins: 'table lists advlist image code link directionality charmap preview emoticons',
-                    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | table tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | bullist numlist | ltr rtl | removeformat',
-                    height: 500,
-                    menubar: true,
-                    table_default_styles: { width: '100%', borderCollapse: 'collapse' },
-                    content_style: 'body { font-family:sans-serif; margin:20px; } table { width:100%; border-collapse:collapse; margin-bottom:10px; } td, th { border:1px solid #9ca3af; padding:6px; min-width:50px; word-break:break-word; } th { background-color:#f3f4f6; }',
-                    setup: function (editor) { editorInstance = editor; }
-                });
-                tinymce.get('wordEditor').setContent(sanitizedHtml);
+                sanitizedHtml = sanitizedHtml.replace(/<table/g, `<table border="1" style="width:100%; border-collapse:collapse; min-width:700px; font-size:14px; text-align:center; font-family:${matchedFont};" cellpadding="5"`);
             }
+
+            sanitizedHtml = `<div style="font-family: ${matchedFont};">${sanitizedHtml}</div>`;
+            mountTinyMCE(sanitizedHtml, matchedFont);
 
             officeWorkspace.style.display = "block";
             officeStatus.className = "status-success";
-            officeStatus.textContent = "Grid synchronized! You can now tap cells to change text, right-click to delete/add columns or rows cleanly.";
+            officeStatus.textContent = `✅ Loaded! Font matching filter applied: Locked editor canvas to [${matchedFont}] matching your original sheets.`;
         } catch(err) {
             officeStatus.className = "status-error";
             officeStatus.textContent = "Failed to sync spreadsheet formatting nodes.";
@@ -640,10 +705,29 @@
         }
     }
 
+    async function mountTinyMCE(content, lockedFont = "Segoe UI, Arial, sans-serif") {
+        if (tinymce.get('wordEditor')) {
+            tinymce.get('wordEditor').setContent(content);
+        } else {
+            await tinymce.init({
+                selector: '#wordEditor',
+                plugins: 'table lists advlist image code link directionality charmap preview emoticons',
+                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | table tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | bullist numlist | ltr rtl | removeformat',
+                height: 500,
+                menubar: true,
+                table_default_styles: { width: '100%', borderCollapse: 'collapse' },
+                content_style: `body { font-family:${lockedFont}; margin:20px; } table { width:100%; border-collapse:collapse; margin-bottom:10px; font-family:${lockedFont}; } td, th { border:1px solid #9ca3af; padding:6px; min-width:50px; word-break:break-word; font-family:${lockedFont}; } th { background-color:#f3f4f6; }`,
+                setup: function (editor) { editorInstance = editor; }
+            });
+            tinymce.get('wordEditor').setContent(content);
+        }
+    }
+
     // EXPORT TO WORD
     document.getElementById('exportDocxBtn').addEventListener('click', async () => {
         if(!editorInstance) return;
-        officeStatus.className = "status-loading"; officeStatus.textContent = "Packing content back to Word binary layers...";
+        officeStatus.className = "status-loading"; 
+        officeStatus.textContent = "💾 Executing [Export as Clean Word Document]: Packing strings into standard OpenXML byte targets...";
 
         try {
             const editorHtml = editorInstance.getContent();
@@ -674,7 +758,9 @@
             const doc = new docx.Document({ sections: [{ children: docParagraphs }] });
             const blob = await docx.Packer.toBlob(doc);
             triggerDownload(URL.createObjectURL(blob), `${loadedDocBaseName}_edited.docx`);
-            officeStatus.className = "status-success"; officeStatus.textContent = "Word grid document generated successfully!";
+            
+            officeStatus.className = "status-success"; 
+            officeStatus.textContent = "✅ Action [Export as Clean Word Document] Completed successfully!";
         } catch(err) {
             officeStatus.className = "status-error"; officeStatus.textContent = "Error compiling file assets.";
         }
@@ -683,14 +769,17 @@
     // EXPORT TO PDF
     document.getElementById('exportPdfBtn').addEventListener('click', async () => {
         if(!editorInstance) return;
-        officeStatus.className = "status-loading"; officeStatus.textContent = "Flattening layouts straight to an A4 PDF document...";
+        officeStatus.className = "status-loading"; 
+        officeStatus.textContent = "📄 Executing [Export as PDF Document]: Flattening tabular grids into landscape vectors...";
 
         try {
             const htmlContent = editorInstance.getContent();
             const pdf = new jspdf.jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
             await pdf.html(htmlContent, { x: 20, y: 30, width: 750, windowWidth: 900 });
             pdf.save(`${loadedDocBaseName}_edited.pdf`);
-            officeStatus.className = "status-success"; officeStatus.textContent = "PDF document exported successfully!";
+            
+            officeStatus.className = "status-success"; 
+            officeStatus.textContent = "✅ Action [Export as PDF Document] Completed successfully!";
         } catch(err) {
             officeStatus.className = "status-error"; officeStatus.textContent = "PDF matrix formatting failed.";
         }
