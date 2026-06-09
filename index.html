@@ -196,7 +196,6 @@
             text-align: center;
             max-height: 450px;
             overflow: auto;
-            position: relative;
         }
 
         .scanner-preview-frame canvas {
@@ -205,7 +204,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             cursor: pointer;
             user-select: none;
-            -webkit-user-select: none;
         }
 
         #status, #scannerStatus, #officeStatus {
@@ -325,7 +323,6 @@
     let scannerImageObject = null;
     let currentInputFileTotalSize = 0;
 
-    // Element mappings
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
@@ -436,7 +433,6 @@
             const quality = compressCheck.checked ? (qualityRange.value / 100) : 0.92;
 
             try {
-                // BRANCH A: CONVERT ANYTHING TO WORD DOCUMENT (WITH INTELLIGENT BLUR OCR DETECTION)
                 if(targetFormat === 'docx') {
                     let extractedText = "Document Extraction Sheet\n\n";
                     
@@ -452,7 +448,6 @@
                         const resHtml = await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) });
                         extractedText = resHtml.value.replace(/<[^>]*>/g, '\n');
                     } else {
-                        // Image file target - activate AI Tesseract Scanner to process blur and extract rows
                         status.textContent = "🧠 Activating Tesseract OCR Core: Processing blurry elements to extract typed text characters...";
                         const img = await loadImage(file);
                         const canvas = document.createElement('canvas');
@@ -460,7 +455,6 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0);
                         
-                        // Perform an inline image contrast correction layout to maximize scanner precision
                         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                         const d = imgData.data;
                         for(let k=0; k<d.length; k+=4) {
@@ -474,7 +468,6 @@
                         extractedText += ocrResult.data.text;
                     }
 
-                    // Convert raw lines into a secure, downloadable .docx binary string block
                     const lines = extractedText.split('\n').filter(l => l.trim() !== '');
                     const docParagraphs = lines.map(l => new docx.Paragraph({
                         children: [new docx.TextRun({ text: l, font: "Segoe UI", size: 24 })],
@@ -485,7 +478,6 @@
                     triggerDownload(docBlob, `${baseName}_converted.docx`);
                     successCount++;
                 } else {
-                    // Regular conversion blocks (PDF/Images target maps)
                     if(fileExt === 'pdf') {
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
                         for(let p=1; p<=pdf.numPages; p++) {
@@ -566,23 +558,21 @@
         setupLongPressEngine();
     }
 
-    // 2-3 SECONDS HOLD TO DOWNLOAD DETECTOR LOGIC (MOBILE OPTIMIZED)
     function setupLongPressEngine() {
         const startEvent = () => {
             touchTimer = setTimeout(() => {
                 scannerStatus.className = "status-loading";
                 scannerStatus.textContent = "⏳ Long-press detected! Extracting binary canvas blob parameters directly to your local storage files...";
                 scannerCanvas.toBlob((blob) => {
-                    triggerDownload(blob, `Hold_Download_${Date.now()}.jpg`);
+                    triggerDownload(blob, `AI_Enhanced_Scan_${Date.now()}.jpg`);
                     scannerStatus.className = "status-success";
                     scannerStatus.textContent = "✅ File downloaded successfully via hold parameters!";
                 }, 'image/jpeg', 0.95);
-            }, 2500); // Trigger timeline set exactly between 2 and 3 seconds
+            }, 2500); 
         };
 
         const cancelEvent = () => { if(touchTimer) clearTimeout(touchTimer); };
 
-        // Bind touch triggers for desktop clicks and smartphone screens
         scannerCanvas.addEventListener('mousedown', startEvent);
         scannerCanvas.addEventListener('mouseup', cancelEvent);
         scannerCanvas.addEventListener('mouseleave', cancelEvent);
@@ -650,27 +640,31 @@
         try {
             const ocrResult = await Tesseract.recognize(scannerCanvas, 'eng');
             const cleanText = ocrResult.data.text;
-
-            // Generate an absolute, clean native HTML editor frame string payload
             const lines = cleanText.split('\n').filter(l => l.trim() !== '');
-            const parsedRowsHtml = lines.map(l => `<tr><td style="padding:10px; border:1px solid #9ca3af;">${l}</td></tr>`).join('');
             
-            const compiledHtmlStructure = `
-                <div style="padding:30px; font-family:'Segoe UI',Arial,sans-serif; background:white; color:black; max-width:800px; margin:auto;">
-                    <h2 style="text-align:center;">AI Extracted Document Grid</h2>
-                    <table style="width:100%; border-collapse:collapse; margin-top:20px;" border="1">
-                        ${parsedRowsHtml}
-                    </table>
-                </div>
+            // Build an advanced table representation matrix mimicking Word structured columns
+            const tableRowsHtml = lines.map(line => {
+                // Split lines containing gaps or bars to isolate column components cleanly
+                const segments = line.split(/[|\t]|\s{3,}/).filter(s => s.trim() !== '');
+                if(segments.length <= 1) {
+                    return `<tr><td colspan="12" style="padding: 10px; border: 1px solid #cbd5e1; text-align: left;">${line}</td></tr>`;
+                }
+                const cellsHtml = segments.map(seg => `<td style="padding: 10px; border: 1px solid #cbd5e1; text-align: center;">${seg}</td>`).join('');
+                return `<tr>${cellsHtml}</tr>`;
+            }).join('');
+
+            const fullyFeaturedTableStructure = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-family: 'Segoe UI', Arial, sans-serif;">
+                    ${tableRowsHtml}
+                </table>
             `;
 
-            // Open a blank page configuration in a new browser window tab frame instantly
-            const editorWindowTab = window.open("", "_blank");
-            editorWindowTab.document.write(generateStandaloneEditorPage(compiledHtmlStructure, "Extracted Word Sheet"));
-            editorWindowTab.document.close();
+            const editorTabWindow = window.open("", "_blank");
+            editorTabWindow.document.write(generateStandaloneEditorPage(fullyFeaturedTableStructure, "AI Extracted Grid"));
+            editorTabWindow.document.close();
 
             scannerStatus.className = "status-success";
-            scannerStatus.textContent = "✅ Successfully parsed and launched inside a separate fullscreen editor tab!";
+            scannerStatus.textContent = "✅ Successfully generated and opened inside a separate fullscreen editor tab!";
         } catch (err) {
             scannerStatus.className = "status-error"; scannerStatus.textContent = "OCR Text extraction failed.";
             console.error(err);
@@ -707,13 +701,13 @@
             const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
             let docxHtmlContent = parseResult.value;
 
+            // Enforce clean layout metrics matching high-end document schemas
             if(!docxHtmlContent.includes('<table')) {
-                docxHtmlContent = `<table border="1" style="width:100%; border-collapse:collapse; min-width:600px; padding:10px;"><tr><td>${docxHtmlContent}</td></tr></table>`;
+                docxHtmlContent = `<p style="text-align: left; margin-bottom: 12px;">${docxHtmlContent}</p>`;
             } else {
-                docxHtmlContent = docxHtmlContent.replace(/<table/g, '<table border="1" style="width:100%; border-collapse:collapse; min-width:700px; font-size:15px; text-align:center;" cellpadding="6"');
+                docxHtmlContent = docxHtmlContent.replace(/<table/g, '<table border="1" style="width:100%; border-collapse:collapse; font-size:14px; text-align:center; border: 1px solid #b1b1b1;" cellpadding="8"');
             }
 
-            // Fire up independent fullscreen tab workspace completely free of third-party framing software
             const editorTab = window.open("", "_blank");
             editorTab.document.write(generateStandaloneEditorPage(docxHtmlContent, loadedDocBaseName));
             editorTab.document.close();
@@ -726,44 +720,147 @@
         }
     }
 
-    // STANDALONE NATIVE WORD COMPLIANT FULLSCREEN EDITOR PAGE COMPILER TEMPLATE
+    // =========================================================================
+    // MS WORD ONLINE & SEJDA PDF FULLSCREEN INTERACTIVE FRAME TEMPLATE COMPILER
+    // =========================================================================
     function generateStandaloneEditorPage(innerHtmlText, filename) {
         return `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-            <title>Editing: ${filename}</title>
+            <meta charset="UTF-8">
+            <title>Microsoft Word Online Workspace - ${filename}</title>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
             <style>
-                body { margin: 0; background-color: #4b5563; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; }
-                .menu-bar { background: #1e1e2e; padding: 12px 20px; display: flex; gap: 15px; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-                .menu-bar h3 { color: #f5c2e7; margin: 0; font-size: 16px; margin-right: 20px; }
-                .menu-bar button { background: #89b4fa; color: #11111b; border: none; padding: 8px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-                .menu-bar button:hover { background: #b4befe; }
-                .menu-bar .btn-pdf { background: #a6e3a1; }
-                .menu-bar .btn-pdf:hover { background: #94e2d5; }
-                .paper-container { flex: 1; overflow: auto; padding: 40px 20px; display: flex; justify-content: center; }
-                .word-document-canvas { background: #ffffff; width: 100%; max-width: 850px; min-height: 1050px; padding: 60px 80px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 4px; outline: none; color: #000000; font-size: 16px; line-height: 1.6; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                td, th { border: 1px solid #111; padding: 8px; font-family: inherit; }
-            <\/style>
+                body { margin: 0; background-color: #f3f2f1; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+                
+                /* MS Word Blue Ribbon Header Design */
+                .word-header { background-color: #106ebe; color: #ffffff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100; }
+                .word-brand-row { display: flex; align-items: center; gap: 12px; }
+                .word-icon { font-weight: 900; background: #ffffff; color: #106ebe; padding: 4px 10px; border-radius: 4px; font-size: 16px; }
+                .word-title { font-size: 16px; font-weight: 600; color: #ffffff; }
+                
+                .ribbon-actions { display: flex; gap: 10px; }
+                .ribbon-actions button { background: #ffffff; color: #106ebe; border: 1px solid #ffffff; padding: 8px 18px; font-weight: 600; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+                .ribbon-actions button:hover { background: #f3f2f1; color: #0b5a9e; }
+                .ribbon-actions .btn-close { background: transparent; color: #ffffff; border-color: #ffffff; }
+                .ribbon-actions .btn-close:hover { background: rgba(255,255,255,0.1); color: #ffffff; }
+
+                /* MS Word Grid Option Ribbon Panels */
+                .word-option-ribbon { background: #ffffff; border-bottom: 1px solid #edebe9; padding: 6px 25px; display: flex; gap: 20px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                .ribbon-group { display: flex; gap: 6px; border-right: 1px solid #edebe9; padding-right: 15px; align-items: center; }
+                .ribbon-group:last-child { border-right: none; }
+                .opt-btn { background: transparent; border: none; color: #323130; padding: 6px 10px; font-size: 12px; font-weight: 500; border-radius: 3px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+                .opt-btn:hover { background: #f3f2f1; color: #201f1e; }
+                .opt-btn strong { font-size: 14px; color: #106ebe; }
+
+                /* Workspace Layout Viewport - Simulates standard desktop infinite scrolls */
+                .workspace-viewport { flex: 1; overflow: auto; padding: 35px 10px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
+                
+                /* Perfect MS Word A4 Canvas Alignment Blueprint Paper Frame */
+                .a4-paper-sheet { background: #ffffff; width: 816px; min-height: 1056px; padding: 96px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; overflow-x: auto; }
+                
+                /* Excel & Word Structured Table Constraints layout overrides */
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: auto; min-width: 600px; }
+                th, td { border: 1px solid #a1a1a1; padding: 8px; text-align: center; vertical-align: middle; min-width: 45px; outline: none; }
+                th { background-color: #f3f2f1; font-weight: 600; }
+                
+                /* Smooth highlight on selected cells to ease row additions */
+                td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
+            </style>
         </head>
         <body>
-            <div class="menu-bar">
-                <h3>Workspace: ${filename}</h3>
-                <button onclick="window.close()">❌ Close Editor</button>
-                <button class="btn-pdf" onclick="saveAsPdf()">📄 Save & Download PDF</button>
+            <div class="word-header">
+                <div class="word-brand-row">
+                    <span class="word-icon">W</span>
+                    <span class="word-title">${filename} - Microsoft Word Online</span>
+                </div>
+                <div class="ribbon-actions">
+                    <button class="btn-close" onclick="window.close()">❌ Close Document</button>
+                    <button onclick="exportDocumentAsPdf()">📄 Export PDF File Blueprint</button>
+                </div>
             </div>
-            <div class="paper-container">
-                <div class="word-document-canvas" contenteditable="true" id="canvasTextarea">${innerHtmlText}</div>
+
+            <div class="word-option-ribbon">
+                <div class="ribbon-group">
+                    <button class="opt-btn" onclick="execCommand('bold')"><strong>B</strong>Bold Text</button>
+                    <button class="opt-btn" onclick="execCommand('italic')"><i>I</i>Italic Text</button>
+                    <button class="opt-btn" onclick="execCommand('underline')"><u>U</u>Underline</button>
+                </div>
+                <div class="ribbon-group">
+                    <button class="opt-btn" onclick="modifyTable('insertRowAfter')">➕ Row Below</button>
+                    <button class="opt-btn" onclick="modifyTable('deleteRow')">➖ Delete Row</button>
+                </div>
+                <div class="ribbon-group">
+                    <button class="opt-btn" onclick="modifyTable('insertColAfter')">📊 Add Column</button>
+                    <button class="opt-btn" onclick="modifyTable('deleteCol')">🗑️ Delete Column</button>
+                </div>
+                <div class="ribbon-group">
+                    <button class="opt-btn" onclick="execCommand('justifyLeft')">⬅️ Left Align</button>
+                    <button class="opt-btn" onclick="execCommand('justifyCenter')">🔲 Center Align</button>
+                </div>
+            </div>
+
+            <div class="workspace-viewport">
+                <div class="a4-paper-sheet" contenteditable="true" id="editorCoreSheet" spellcheck="false">
+                    ${innerHtmlText}
+                </div>
             </div>
 
             <script>
-                function saveAsPdf() {
-                    const content = document.getElementById('canvasTextarea').innerHTML;
-                    const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-                    pdf.html(content, {
-                        x: 40, y: 40, width: 515, windowWidth: 750,
+                function execCommand(type) {
+                    document.execCommand(type, false, null);
+                    document.getElementById('editorCoreSheet').focus();
+                }
+
+                // Grid management algorithms to scale rows and columns on selection focus
+                function modifyTable(action) {
+                    const selection = window.getSelection();
+                    if (!selection.rangeCount) return;
+                    
+                    let targetCell = selection.anchorNode;
+                    while (targetCell && targetCell.nodeName !== 'TD' && targetCell.nodeName !== 'TH') {
+                        targetCell = targetCell.parentNode;
+                    }
+                    if (!targetCell) { alert("Please click inside a table cell to add or remove items."); return; }
+
+                    const row = targetCell.parentNode;
+                    const table = row.parentNode;
+                    const cellIndex = targetCell.cellIndex;
+                    const rowIndex = row.rowIndex;
+
+                    if (action === 'insertRowAfter') {
+                        const newRow = row.cloneNode(true);
+                        Array.from(newRow.cells).forEach(cell => cell.innerHTML = "&nbsp;");
+                        row.parentNode.insertBefore(newRow, row.nextSibling);
+                    } 
+                    else if (action === 'deleteRow') {
+                        if (table.rows.length > 1) row.remove();
+                        else alert("Cannot purge core base layout array rows.");
+                    } 
+                    else if (action === 'insertColAfter') {
+                        Array.from(table.rows).forEach(r => {
+                            const newCell = r.cells[cellIndex].cloneNode(true);
+                            newCell.innerHTML = "&nbsp;";
+                            r.insertBefore(newCell, r.cells[cellIndex].nextSibling);
+                        });
+                    } 
+                    else if (action === 'deleteCol') {
+                        const totalCols = row.cells.length;
+                        if (totalCols > 1) {
+                            Array.from(table.rows).forEach(r => r.cells[cellIndex].remove());
+                        } else {
+                            alert("Cannot remove the last standing data column structure.");
+                        }
+                    }
+                }
+
+                function exportDocumentAsPdf() {
+                    const sheet = document.getElementById('editorCoreSheet');
+                    const pdf = new jspdf.jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
+                    
+                    pdf.html(sheet, {
+                        x: 30, y: 30, width: 780, windowWidth: 900,
                         callback: function(doc) {
                             doc.save("${filename}_edited.pdf");
                         }
