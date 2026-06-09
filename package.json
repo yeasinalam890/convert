@@ -1,0 +1,16 @@
+{
+  "name": "universal-file-converter",
+  "version": "1.0.0",
+  "description": "A web application to convert and compress multiple file types.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "pdf-poppler": "^2.1.2",
+    "pdfkit": "^0.15.0",
+    "sharp": "^0.33.4"
+  }
+}
