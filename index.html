@@ -256,7 +256,7 @@
                 <option value="png">Convert to PNG (Image)</option>
                 <option value="webp">Convert to WebP (Optimized Image)</option>
                 <option value="pdf">Convert to PDF (Document)</option>
-                <option value="docx">Convert to Word DOCX (AI Text Detection)</option>
+                <option value="docx">Convert to Word DOCX (AI Layout Auto-Detection)</option>
             </select>
         </div>
 
@@ -393,7 +393,6 @@
 
     function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
-    function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
     function triggerDownload(urlOrBlobData, filename) {
         try {
@@ -417,12 +416,102 @@
         }
     }
 
+    // AI TEXT & MATRIX LAYOUT GENERATION ALGORITHM ENGINE
+    function convertTextToStructuredHtml(rawText) {
+        const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        let htmlOutput = "";
+        let inTable = false;
+        let tableHeaderProcessed = false;
+
+        // Document Info Block Scanners (Top Metadata Detection)
+        let headerBlocks = [];
+        let bodyLines = [];
+
+        lines.forEach(line => {
+            if (line.toLowerCase().includes("to:") || line.toLowerCase().includes("bill no") || line.toLowerCase().includes("date:") || line.toLowerCase().includes("name :") || line.toLowerCase().includes("address :")) {
+                headerBlocks.push(line);
+            } else {
+                bodyLines.push(line);
+            }
+        });
+
+        // Generate Metadata Block Rows
+        if (headerBlocks.length > 0) {
+            htmlOutput += `<div style="margin-bottom: 25px; padding: 10px; border-bottom: 2px solid #106ebe; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size:14px;">`;
+            headerBlocks.forEach(item => {
+                htmlOutput += `<div><strong>${item}</strong></div>`;
+            });
+            htmlOutput += `</div>`;
+        }
+
+        // Process Table Columns & Data Grids Matrix Arrays
+        bodyLines.forEach(line => {
+            // Detect lines that contain table columns (Numbers, money symbols, SL index targets)
+            const columns = line.split(/[|,\t]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0);
+            
+            const isRowData = columns.length > 1 && (
+                /^\d+$/.test(columns[0]) || 
+                line.toLowerCase().includes("total") || 
+                line.toLowerCase().includes("subtotal") ||
+                line.toLowerCase().includes("%") ||
+                /^\d+[\d,.]*/.test(columns[columns.length - 1])
+            );
+
+            if (isRowData) {
+                if (!inTable) {
+                    htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 20px 0; font-size:14px; text-align:center;">`;
+                    inTable = true;
+                }
+                
+                // If it is the first row inside the detected matrix, treat it as the Column Headers Row
+                if (!tableHeaderProcessed && !line.toLowerCase().includes("total")) {
+                    htmlOutput += `<tr style="background-color: #f3f2f1; font-weight: bold;">`;
+                    columns.forEach(col => { htmlOutput += `<th style="padding: 10px; border: 1px solid #cbd5e1;">${col}</th>`; });
+                    htmlOutput += `</tr>`;
+                    tableHeaderProcessed = true;
+                } else if (line.toLowerCase().includes("total")) {
+                    // Highlight the final Total calculation row beautifully like MS Word
+                    htmlOutput += `<tr style="font-weight: bold; background-color: #eef2ff;">`;
+                    if (columns.length === 2) {
+                        htmlOutput += `<td colspan="2" style="padding: 10px; border: 1px solid #cbd5e1; text-align:right; padding-right:20px;">${columns[0]}</td>`;
+                        htmlOutput += `<td style="padding: 10px; border: 1px solid #cbd5e1; color:#106ebe;">${columns[1]}</td>`;
+                    } else {
+                        columns.forEach((col, idx) => {
+                            htmlOutput += `<td style="padding: 10px; border: 1px solid #cbd5e1; ${idx === columns.length-1 ? 'color:#106ebe;' : ''}">${col}</td>`;
+                        });
+                    }
+                    htmlOutput += `</tr>`;
+                } else {
+                    // Plain Table Row
+                    htmlOutput += `<tr>`;
+                    columns.forEach(col => { htmlOutput += `<td style="padding: 10px; border: 1px solid #cbd5e1;">${col}</td>`; });
+                    htmlOutput += `</tr>`;
+                }
+            } else {
+                if (inTable) {
+                    htmlOutput += `</table>`;
+                    inTable = false;
+                    tableHeaderProcessed = false;
+                }
+                // Regular descriptive paragraph rows (Notes, Footer text data tags)
+                if (line.toLowerCase().includes("bill") || line.toUpperCase() === "BILL") {
+                    htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; letter-spacing:1px;">${line}</h2>`;
+                } else {
+                    htmlOutput += `<p style="margin: 8px 0; text-align: left; font-size:14px; color:#323130;">${line}</p>`;
+                }
+            }
+        });
+
+        if (inTable) { htmlOutput += `</table>`; }
+        return htmlOutput;
+    }
+
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files;
         if(!files.length) { alert('Upload files first.'); return; }
         
         status.className = "status-loading"; 
-        status.textContent = "⚙️ Processing layout parameters & loading text detectors...";
+        status.textContent = "⚙️ Processing layouts and applying OCR engines...";
         let successCount = 0;
 
         for(let i=0; i<files.length; i++) {
@@ -434,10 +523,10 @@
 
             try {
                 if(targetFormat === 'docx') {
-                    let extractedText = "Document Extraction Sheet\n\n";
+                    let extractedText = "";
                     
                     if(fileExt === 'pdf') {
-                        status.textContent = "🔍 Reading PDF structural pages and decoding character streams...";
+                        status.textContent = "🔍 Reading PDF and extracting characters...";
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
                         for(let p=1; p<=pdf.numPages; p++) {
                             const page = await pdf.getPage(p);
@@ -448,7 +537,7 @@
                         const resHtml = await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) });
                         extractedText = resHtml.value.replace(/<[^>]*>/g, '\n');
                     } else {
-                        status.textContent = "🧠 Activating Tesseract OCR Core: Processing blurry elements to extract typed text characters...";
+                        status.textContent = "🧠 AI OCR Processing: Scanning blurry text and reconstructing rows...";
                         const img = await loadImage(file);
                         const canvas = document.createElement('canvas');
                         canvas.width = img.width; canvas.height = img.height;
@@ -478,6 +567,7 @@
                     triggerDownload(docBlob, `${baseName}_converted.docx`);
                     successCount++;
                 } else {
+                    // General PDF and Image batch configurations
                     if(fileExt === 'pdf') {
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
                         for(let p=1; p<=pdf.numPages; p++) {
@@ -553,8 +643,7 @@
         sCtx.drawImage(scannerImageObject, 0, 0);
 
         scannerStatus.className = "status-success";
-        scannerStatus.textContent = "Photo loaded smoothly into context matrix.";
-        
+        scannerStatus.textContent = "Photo loaded smoothly into canvas memory.";
         setupLongPressEngine();
     }
 
@@ -562,15 +651,14 @@
         const startEvent = () => {
             touchTimer = setTimeout(() => {
                 scannerStatus.className = "status-loading";
-                scannerStatus.textContent = "⏳ Long-press detected! Extracting binary canvas blob parameters directly to your local storage files...";
+                scannerStatus.textContent = "⏳ Long-press detected! Extracting snapshot data directly to storage...";
                 scannerCanvas.toBlob((blob) => {
                     triggerDownload(blob, `AI_Enhanced_Scan_${Date.now()}.jpg`);
                     scannerStatus.className = "status-success";
-                    scannerStatus.textContent = "✅ File downloaded successfully via hold parameters!";
+                    scannerStatus.textContent = "✅ Downloaded successfully via long-press tool!";
                 }, 'image/jpeg', 0.95);
             }, 2500); 
         };
-
         const cancelEvent = () => { if(touchTimer) clearTimeout(touchTimer); };
 
         scannerCanvas.addEventListener('mousedown', startEvent);
@@ -583,7 +671,7 @@
     document.getElementById('enhanceClearBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "✨ Executing [AI Smart Scan & Brighten]: Balancing local ambient exposure layers smoothly...";
+        scannerStatus.textContent = "✨ Executing [AI Smart Scan & Brighten]: Balancing local exposure maps...";
 
         setTimeout(() => {
             sCtx.drawImage(scannerImageObject, 0, 0);
@@ -620,13 +708,12 @@
     document.getElementById('scannerToPdfBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "📄 Executing [Convert & Download PDF]...";
         scannerCanvas.toBlob((blob) => {
             const pdf = new jspdf.jsPDF({ orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p', unit: 'px', format: [scannerCanvas.width, scannerCanvas.height] });
             const reader = new FileReader(); reader.readAsDataURL(blob);
             reader.onloadend = function() {
                 pdf.addImage(reader.result, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height);
-                triggerDownload(pdf.output('blob'), `AI_Enhanced_Document_${Date.now()}.pdf`);
+                triggerDownload(pdf.output('blob'), `AI_Enhanced_Scan_${Date.now()}.pdf`);
                 scannerStatus.className = "status-success"; scannerStatus.textContent = "✅ PDF Document downloaded successfully.";
             }
         }, 'image/jpeg', 0.95);
@@ -635,36 +722,19 @@
     document.getElementById('scannerToDocxBtn').addEventListener('click', async () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "🧠 Running OCR Core Engine: Extracting blurry characters directly into editable plain text blocks...";
+        scannerStatus.textContent = "🧠 Running OCR Core Engine: Transforming blurry pixels into clean MS Office Grid cells...";
 
         try {
             const ocrResult = await Tesseract.recognize(scannerCanvas, 'eng');
-            const cleanText = ocrResult.data.text;
-            const lines = cleanText.split('\n').filter(l => l.trim() !== '');
-            
-            // Build an advanced table representation matrix mimicking Word structured columns
-            const tableRowsHtml = lines.map(line => {
-                // Split lines containing gaps or bars to isolate column components cleanly
-                const segments = line.split(/[|\t]|\s{3,}/).filter(s => s.trim() !== '');
-                if(segments.length <= 1) {
-                    return `<tr><td colspan="12" style="padding: 10px; border: 1px solid #cbd5e1; text-align: left;">${line}</td></tr>`;
-                }
-                const cellsHtml = segments.map(seg => `<td style="padding: 10px; border: 1px solid #cbd5e1; text-align: center;">${seg}</td>`).join('');
-                return `<tr>${cellsHtml}</tr>`;
-            }).join('');
+            const structuredHtmlContent = convertTextToStructuredHtml(ocrResult.data.text);
 
-            const fullyFeaturedTableStructure = `
-                <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-family: 'Segoe UI', Arial, sans-serif;">
-                    ${tableRowsHtml}
-                </table>
-            `;
-
+            // Launch layout perfectly in a separate fullscreen tab
             const editorTabWindow = window.open("", "_blank");
-            editorTabWindow.document.write(generateStandaloneEditorPage(fullyFeaturedTableStructure, "AI Extracted Grid"));
+            editorTabWindow.document.write(generateStandaloneEditorPage(structuredHtmlContent, "AI Extracted Bill Grid"));
             editorTabWindow.document.close();
 
             scannerStatus.className = "status-success";
-            scannerStatus.textContent = "✅ Successfully generated and opened inside a separate fullscreen editor tab!";
+            scannerStatus.textContent = "✅ Successfully reconstructed matrix grid and launched inside a separate fullscreen editor tab!";
         } catch (err) {
             scannerStatus.className = "status-error"; scannerStatus.textContent = "OCR Text extraction failed.";
             console.error(err);
@@ -694,22 +764,15 @@
 
         loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
         officeStatus.className = "status-loading";
-        officeStatus.textContent = "🔄 De-serializing OpenXML layout chains... Launching full workspace browser tab...";
+        officeStatus.textContent = "🔄 De-serializing OpenXML tables... Launching full workspace browser tab...";
 
         try {
             const buffer = await readFileAsBuffer(file);
             const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
-            let docxHtmlContent = parseResult.value;
-
-            // Enforce clean layout metrics matching high-end document schemas
-            if(!docxHtmlContent.includes('<table')) {
-                docxHtmlContent = `<p style="text-align: left; margin-bottom: 12px;">${docxHtmlContent}</p>`;
-            } else {
-                docxHtmlContent = docxHtmlContent.replace(/<table/g, '<table border="1" style="width:100%; border-collapse:collapse; font-size:14px; text-align:center; border: 1px solid #b1b1b1;" cellpadding="8"');
-            }
+            const structuredHtmlContent = convertTextToStructuredHtml(parseResult.value.replace(/<[^>]*>/g, '\n'));
 
             const editorTab = window.open("", "_blank");
-            editorTab.document.write(generateStandaloneEditorPage(docxHtmlContent, loadedDocBaseName));
+            editorTab.document.write(generateStandaloneEditorPage(structuredHtmlContent, loadedDocBaseName));
             editorTab.document.close();
 
             officeStatus.className = "status-success";
@@ -754,18 +817,17 @@
                 .opt-btn:hover { background: #f3f2f1; color: #201f1e; }
                 .opt-btn strong { font-size: 14px; color: #106ebe; }
 
-                /* Workspace Layout Viewport - Simulates standard desktop infinite scrolls */
+                /* Workspace Layout Viewport */
                 .workspace-viewport { flex: 1; overflow: auto; padding: 35px 10px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
                 
                 /* Perfect MS Word A4 Canvas Alignment Blueprint Paper Frame */
-                .a4-paper-sheet { background: #ffffff; width: 816px; min-height: 1056px; padding: 96px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; overflow-x: auto; }
+                .a4-paper-sheet { background: #ffffff; width: 816px; min-height: 1056px; padding: 70px 80px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
                 
-                /* Excel & Word Structured Table Constraints layout overrides */
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: auto; min-width: 600px; }
-                th, td { border: 1px solid #a1a1a1; padding: 8px; text-align: center; vertical-align: middle; min-width: 45px; outline: none; }
-                th { background-color: #f3f2f1; font-weight: 600; }
+                /* Excel & Word Structured Table Constraints */
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
+                th, td { border: 1px solid #a1a1a1; padding: 8px; text-align: center; vertical-align: middle; word-break: break-all; font-size: 13px; outline: none; }
+                th { background-color: #f3f2f1; font-weight: 600; color: #323130; }
                 
-                /* Smooth highlight on selected cells to ease row additions */
                 td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
             </style>
         </head>
@@ -813,7 +875,6 @@
                     document.getElementById('editorCoreSheet').focus();
                 }
 
-                // Grid management algorithms to scale rows and columns on selection focus
                 function modifyTable(action) {
                     const selection = window.getSelection();
                     if (!selection.rangeCount) return;
@@ -827,7 +888,6 @@
                     const row = targetCell.parentNode;
                     const table = row.parentNode;
                     const cellIndex = targetCell.cellIndex;
-                    const rowIndex = row.rowIndex;
 
                     if (action === 'insertRowAfter') {
                         const newRow = row.cloneNode(true);
@@ -836,7 +896,6 @@
                     } 
                     else if (action === 'deleteRow') {
                         if (table.rows.length > 1) row.remove();
-                        else alert("Cannot purge core base layout array rows.");
                     } 
                     else if (action === 'insertColAfter') {
                         Array.from(table.rows).forEach(r => {
@@ -846,21 +905,18 @@
                         });
                     } 
                     else if (action === 'deleteCol') {
-                        const totalCols = row.cells.length;
-                        if (totalCols > 1) {
+                        if (row.cells.length > 1) {
                             Array.from(table.rows).forEach(r => r.cells[cellIndex].remove());
-                        } else {
-                            alert("Cannot remove the last standing data column structure.");
                         }
                     }
                 }
 
                 function exportDocumentAsPdf() {
                     const sheet = document.getElementById('editorCoreSheet');
-                    const pdf = new jspdf.jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
+                    const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
                     
                     pdf.html(sheet, {
-                        x: 30, y: 30, width: 780, windowWidth: 900,
+                        x: 40, y: 40, width: 515, windowWidth: 816,
                         callback: function(doc) {
                             doc.save("${filename}_edited.pdf");
                         }
