@@ -61,7 +61,7 @@
             width: 100%;
             max-width: 450px;
             box-sizing: border-box;
-            margin-bottom: auto; /* Pushes the footer down naturally */
+            margin-bottom: auto;
         }
 
         h2 {
@@ -227,7 +227,7 @@
     
     <div class="drop-zone" id="dropZone">
         <p>Drag & drop file here or <strong>browse</strong></p>
-        <input type="file" id="fileInput" style="display: none;">
+        <input type="file" id="fileInput" style="display: none;" accept="image/*">
         <span id="fileName"></span>
     </div>
 
@@ -235,10 +235,9 @@
         <label for="formatSelect">Output Format</label>
         <select id="formatSelect">
             <option value="">Keep Original Format (Compression Only)</option>
-            <option value="jpg">Convert to JPG (Image)</option>
+            <option value="jpeg">Convert to JPG (Image)</option>
             <option value="png">Convert to PNG (Image)</option>
             <option value="webp">Convert to WebP (Optimized Image)</option>
-            <option value="pdf">Convert to PDF (Document)</option>
         </select>
     </div>
 
@@ -312,50 +311,63 @@
         qualityVal.textContent = qualityRange.value + '%';
     });
 
-    // Request Submissions
-    convertBtn.addEventListener('click', async () => {
-        if (!fileInput.files.length) {
+    // Client-side Frontend Image Engine 
+    convertBtn.addEventListener('click', () => {
+        const file = fileInput.files[0];
+        if (!file) {
             alert('Please upload or drop a file first.');
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        formData.append('outputFormat', formatSelect.value);
-        formData.append('compress', compressCheck.checked);
-        formData.append('quality', qualityRange.value);
-
         status.className = "status-loading";
-        status.textContent = "Processing backend pipelines... Hold tight.";
+        status.textContent = "Processing image layouts... Hold tight.";
 
-        try {
-            const response = await fetch('/convert', { method: 'POST', body: formData });
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(errText || 'Processing engine error');
-            }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function (event) {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = function () {
+                // Initialize canvas processing dimensions
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Draw raw matrix representation
+                ctx.drawImage(img, 0, 0);
 
-            // Read download payload stream
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            
-            // Infer execution extension targets
-            const downloadExt = formatSelect.value || fileInput.files[0].name.split('.').pop();
-            a.download = `processed_${Date.now()}.${downloadExt}`;
-            
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            
-            status.className = "status-success";
-            status.textContent = "Done! Enjoy your optimized file.";
-        } catch (err) {
+                // Setup targeted MIME layouts
+                let targetFormat = formatSelect.value ? `image/${formatSelect.value}` : file.type;
+                const quality = compressCheck.checked ? (qualityRange.value / 100) : 0.92;
+
+                try {
+                    // Export directly via client data stream URLs
+                    const dataUrl = canvas.toDataURL(targetFormat, quality);
+                    
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    
+                    const downloadExt = formatSelect.value || file.name.split('.').pop();
+                    a.download = `processed_${Date.now()}.${downloadExt}`;
+                    
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+
+                    status.className = "status-success";
+                    status.textContent = "Done! Enjoy your optimized file.";
+                } catch (err) {
+                    status.className = "status-error";
+                    status.textContent = "Encoding mismatch or format export crash.";
+                    console.error(err);
+                }
+            };
+        };
+        reader.onerror = function() {
             status.className = "status-error";
-            status.textContent = err.message || "An unexpected processing error occurred.";
-            console.error(err);
-        }
+            status.textContent = "Local file stream streaming failed.";
+        };
     });
 </script>
 </body>
