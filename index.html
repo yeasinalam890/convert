@@ -241,7 +241,7 @@
 
 <div class="app-grid">
     <div class="converter-container">
-        <h2>1. Batch Converter & Compressor (AI Scan Feature Included)</h2>
+        <h2>1. Batch Converter & Compressor (AI Layout Sync)</h2>
         <div class="drop-zone" id="dropZone">
             <p>Drag & drop any image, doc, or PDF here or <strong>browse</strong></p>
             <input type="file" id="fileInput" style="display: none;" accept="image/*,.doc,.docx,.pdf" multiple>
@@ -256,7 +256,7 @@
                 <option value="png">Convert to PNG (Image)</option>
                 <option value="webp">Convert to WebP (Optimized Image)</option>
                 <option value="pdf">Convert to PDF (Document)</option>
-                <option value="docx">Convert to Word DOCX (AI Layout Auto-Detection)</option>
+                <option value="docx">Convert to Word DOCX (AI Layout Grid Reconstruction)</option>
             </select>
         </div>
 
@@ -393,6 +393,7 @@
 
     function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
+    function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
     function triggerDownload(urlOrBlobData, filename) {
         try {
@@ -416,93 +417,88 @@
         }
     }
 
-    // AI TEXT & MATRIX LAYOUT GENERATION ALGORITHM ENGINE
+    // ADVANCED ADAPTIVE DYNAMIC STRUCTURAL GENERATOR
     function convertTextToStructuredHtml(rawText) {
         const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
         let htmlOutput = "";
-        let inTable = false;
-        let tableHeaderProcessed = false;
+        let tableRows = [];
+        let metadataBlocks = [];
 
-        // Document Info Block Scanners (Top Metadata Detection)
-        let headerBlocks = [];
-        let bodyLines = [];
+        // Advanced Regex Maps matching Bill/Invoice metadata blocks
+        const metadataRegex = /(name\s*:\s*|bill\s*no\s*:\s*|date\s*:\s*|address\s*:\s*|owner\s*name\s*:\s*|license\s*:\s*|bank\s*:\s*|email\s*:\s*|mobile\s*:\s*)/i;
 
         lines.forEach(line => {
-            if (line.toLowerCase().includes("to:") || line.toLowerCase().includes("bill no") || line.toLowerCase().includes("date:") || line.toLowerCase().includes("name :") || line.toLowerCase().includes("address :")) {
-                headerBlocks.push(line);
+            // Isolate Document Layout Header/Footer properties from Grid Tables data elements
+            const cells = line.split(/[|│\t]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0);
+            
+            // Check if this row represents structured tabular entries
+            const isTableLine = cells.length > 1 && (
+                /^\d+$/.test(cells[0]) || 
+                line.toLowerCase().includes("total") || 
+                line.toLowerCase().includes("sl.") || 
+                line.toLowerCase().includes("vat") ||
+                line.toLowerCase().includes("amount") ||
+                /^\d+[\d,.]*/.test(cells[cells.length - 1])
+            );
+
+            if (isTableLine) {
+                tableRows.push(cells);
+            } else if (metadataRegex.test(line)) {
+                metadataBlocks.push(line);
             } else {
-                bodyLines.push(line);
+                // Standalone textual formatting blocks
+                if (line.toLowerCase().includes("bill") || line.toUpperCase() === "BILL") {
+                    htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; text-transform:uppercase; font-size:24px; font-weight:800; border:none; padding:0;">${line}</h2>`;
+                } else if(line.toLowerCase().includes("engineering") || line.toLowerCase().includes("maintenance")) {
+                    htmlOutput += `<h1 style="text-align:center; color:#1e3a8a; margin:5px 0; font-size:28px;">${line}</h1>`;
+                } else {
+                    htmlOutput += `<p style="margin: 6px 0; text-align: left; font-size:14px; color:#1f2937;">${line}</p>`;
+                }
             }
         });
 
-        // Generate Metadata Block Rows
-        if (headerBlocks.length > 0) {
-            htmlOutput += `<div style="margin-bottom: 25px; padding: 10px; border-bottom: 2px solid #106ebe; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size:14px;">`;
-            headerBlocks.forEach(item => {
-                htmlOutput += `<div><strong>${item}</strong></div>`;
+        // Compile extracted metadata elements cleanly into side-by-side informational cells
+        if (metadataBlocks.length > 0) {
+            htmlOutput += `<div style="margin: 20px 0; padding: 12px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size:13.5px; line-height:1.6;">`;
+            metadataBlocks.forEach(item => {
+                htmlOutput += `<div>${item}</div>`;
             });
             htmlOutput += `</div>`;
         }
 
-        // Process Table Columns & Data Grids Matrix Arrays
-        bodyLines.forEach(line => {
-            // Detect lines that contain table columns (Numbers, money symbols, SL index targets)
-            const columns = line.split(/[|,\t]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0);
+        // Build the unified table grid matrix
+        if (tableRows.length > 0) {
+            htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">`;
             
-            const isRowData = columns.length > 1 && (
-                /^\d+$/.test(columns[0]) || 
-                line.toLowerCase().includes("total") || 
-                line.toLowerCase().includes("subtotal") ||
-                line.toLowerCase().includes("%") ||
-                /^\d+[\d,.]*/.test(columns[columns.length - 1])
-            );
+            tableRows.forEach((row, rowIndex) => {
+                const isHeader = row.some(cell => cell.toLowerCase().includes("sl") || cell.toLowerCase().includes("name") || cell.toLowerCase().includes("amount") || cell.toLowerCase().includes("tax"));
+                const isTotal = row.some(cell => cell.toLowerCase().includes("total"));
 
-            if (isRowData) {
-                if (!inTable) {
-                    htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 20px 0; font-size:14px; text-align:center;">`;
-                    inTable = true;
-                }
-                
-                // If it is the first row inside the detected matrix, treat it as the Column Headers Row
-                if (!tableHeaderProcessed && !line.toLowerCase().includes("total")) {
-                    htmlOutput += `<tr style="background-color: #f3f2f1; font-weight: bold;">`;
-                    columns.forEach(col => { htmlOutput += `<th style="padding: 10px; border: 1px solid #cbd5e1;">${col}</th>`; });
+                if (isHeader) {
+                    htmlOutput += `<tr style="background-color: #106ebe; color: #ffffff; font-weight: bold; text-transform: uppercase;">`;
+                    row.forEach(cell => { htmlOutput += `<th style="padding: 12px 8px; border: 1px solid #cbd5e1;">${cell}</th>`; });
                     htmlOutput += `</tr>`;
-                    tableHeaderProcessed = true;
-                } else if (line.toLowerCase().includes("total")) {
-                    // Highlight the final Total calculation row beautifully like MS Word
-                    htmlOutput += `<tr style="font-weight: bold; background-color: #eef2ff;">`;
-                    if (columns.length === 2) {
-                        htmlOutput += `<td colspan="2" style="padding: 10px; border: 1px solid #cbd5e1; text-align:right; padding-right:20px;">${columns[0]}</td>`;
-                        htmlOutput += `<td style="padding: 10px; border: 1px solid #cbd5e1; color:#106ebe;">${columns[1]}</td>`;
+                } else if (isTotal) {
+                    htmlOutput += `<tr style="font-weight: bold; background-color: #f0f4ff; color: #1e3a8a;">`;
+                    if (row.length === 2) {
+                        htmlOutput += `<td colspan="3" style="padding: 12px 8px; border: 1px solid #cbd5e1; text-align: right; padding-right: 25px;">${row[0]}</td>`;
+                        htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #cbd5e1; font-size:16px;">${row[1]}</td>`;
                     } else {
-                        columns.forEach((col, idx) => {
-                            htmlOutput += `<td style="padding: 10px; border: 1px solid #cbd5e1; ${idx === columns.length-1 ? 'color:#106ebe;' : ''}">${col}</td>`;
+                        row.forEach((cell, idx) => {
+                            htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #cbd5e1; ${idx === row.length-1 ? 'font-size:16px;' : ''}">${cell}</td>`;
                         });
                     }
                     htmlOutput += `</tr>`;
                 } else {
-                    // Plain Table Row
                     htmlOutput += `<tr>`;
-                    columns.forEach(col => { htmlOutput += `<td style="padding: 10px; border: 1px solid #cbd5e1;">${col}</td>`; });
+                    row.forEach(cell => { htmlOutput += `<td style="padding: 10px 8px; border: 1px solid #e2e8f0; color:#334155;">${cell}</td>`; });
                     htmlOutput += `</tr>`;
                 }
-            } else {
-                if (inTable) {
-                    htmlOutput += `</table>`;
-                    inTable = false;
-                    tableHeaderProcessed = false;
-                }
-                // Regular descriptive paragraph rows (Notes, Footer text data tags)
-                if (line.toLowerCase().includes("bill") || line.toUpperCase() === "BILL") {
-                    htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; letter-spacing:1px;">${line}</h2>`;
-                } else {
-                    htmlOutput += `<p style="margin: 8px 0; text-align: left; font-size:14px; color:#323130;">${line}</p>`;
-                }
-            }
-        });
+            });
 
-        if (inTable) { htmlOutput += `</table>`; }
+            htmlOutput += `</table>`;
+        }
+
         return htmlOutput;
     }
 
@@ -511,7 +507,7 @@
         if(!files.length) { alert('Upload files first.'); return; }
         
         status.className = "status-loading"; 
-        status.textContent = "⚙️ Processing layouts and applying OCR engines...";
+        status.textContent = "⚙️ Processing layout parameters & loading text detectors...";
         let successCount = 0;
 
         for(let i=0; i<files.length; i++) {
@@ -567,7 +563,6 @@
                     triggerDownload(docBlob, `${baseName}_converted.docx`);
                     successCount++;
                 } else {
-                    // General PDF and Image batch configurations
                     if(fileExt === 'pdf') {
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
                         for(let p=1; p<=pdf.numPages; p++) {
@@ -722,21 +717,20 @@
     document.getElementById('scannerToDocxBtn').addEventListener('click', async () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "🧠 Running OCR Core Engine: Transforming blurry pixels into clean MS Office Grid cells...";
+        scannerStatus.textContent = "🧠 Running AI Layout Sync: Extracting pixels and structuring real MS Office Grid cells...";
 
         try {
             const ocrResult = await Tesseract.recognize(scannerCanvas, 'eng');
             const structuredHtmlContent = convertTextToStructuredHtml(ocrResult.data.text);
 
-            // Launch layout perfectly in a separate fullscreen tab
             const editorTabWindow = window.open("", "_blank");
-            editorTabWindow.document.write(generateStandaloneEditorPage(structuredHtmlContent, "AI Extracted Bill Grid"));
+            editorTabWindow.document.write(generateStandaloneEditorPage(structuredHtmlContent, "AI Reconstructed Invoice"));
             editorTabWindow.document.close();
 
             scannerStatus.className = "status-success";
-            scannerStatus.textContent = "✅ Successfully reconstructed matrix grid and launched inside a separate fullscreen editor tab!";
+            scannerStatus.textContent = "✅ Reconstructed matrix grid and launched inside a new browser workspace tab!";
         } catch (err) {
-            scannerStatus.className = "status-error"; scannerStatus.textContent = "OCR Text extraction failed.";
+            scannerStatus.className = "status-error"; scannerStatus.textContent = "OCR extraction failed.";
             console.error(err);
         }
     });
@@ -764,7 +758,7 @@
 
         loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
         officeStatus.className = "status-loading";
-        officeStatus.textContent = "🔄 De-serializing OpenXML tables... Launching full workspace browser tab...";
+        officeStatus.textContent = "🔄 Parsing OpenXML document schemas... Launching workspace page...";
 
         try {
             const buffer = await readFileAsBuffer(file);
@@ -776,9 +770,9 @@
             editorTab.document.close();
 
             officeStatus.className = "status-success";
-            officeStatus.textContent = "✅ Workspace launched successfully inside a fresh browser tab view!";
+            officeStatus.textContent = "✅ Workspace opened inside a new tab view!";
         } catch(err) {
-            officeStatus.className = "status-error"; officeStatus.textContent = "Failed to launch window target.";
+            officeStatus.className = "status-error"; officeStatus.textContent = "Failed to open window workspace target.";
             console.error(err);
         }
     }
@@ -793,9 +787,9 @@
         <head>
             <meta charset="UTF-8">
             <title>Microsoft Word Online Workspace - ${filename}</title>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
             <style>
-                body { margin: 0; background-color: #f3f2f1; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+                body { margin: 0; background-color: #f3f2f1; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
                 
                 /* MS Word Blue Ribbon Header Design */
                 .word-header { background-color: #106ebe; color: #ffffff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100; }
@@ -821,12 +815,12 @@
                 .workspace-viewport { flex: 1; overflow: auto; padding: 35px 10px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
                 
                 /* Perfect MS Word A4 Canvas Alignment Blueprint Paper Frame */
-                .a4-paper-sheet { background: #ffffff; width: 816px; min-height: 1056px; padding: 70px 80px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
+                .a4-paper-sheet { background: #ffffff; width: 816px; min-height: 1056px; padding: 60px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
                 
-                /* Excel & Word Structured Table Constraints */
+                /* Structured Grid Table Properties matching invoice frames */
                 table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
-                th, td { border: 1px solid #a1a1a1; padding: 8px; text-align: center; vertical-align: middle; word-break: break-all; font-size: 13px; outline: none; }
-                th { background-color: #f3f2f1; font-weight: 600; color: #323130; }
+                th, td { border: 1px solid #4b5563; padding: 10px 6px; text-align: center; vertical-align: middle; word-break: break-word; font-size: 13px; outline: none; }
+                th { background-color: #106ebe; font-weight: 600; color: #ffffff; }
                 
                 td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
             </style>
@@ -911,16 +905,21 @@
                     }
                 }
 
+                // ADVANCED HIGH-FIDELITY MOBILE MOBILE-FRIENDLY PDF EXPORT ENCAPSULATION
                 function exportDocumentAsPdf() {
-                    const sheet = document.getElementById('editorCoreSheet');
-                    const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                    const element = document.getElementById('editorCoreSheet');
                     
-                    pdf.html(sheet, {
-                        x: 40, y: 40, width: 515, windowWidth: 816,
-                        callback: function(doc) {
-                            doc.save("${filename}_edited.pdf");
-                        }
-                    });
+                    // Configuration profiles maximizing table cross-platform view stability
+                    const options = {
+                        margin:       [30, 30, 30, 30],
+                        filename:     '${filename}_Edited_Document.pdf',
+                        image:        { type: 'jpeg', quality: 0.98 },
+                        html2canvas:  { scale: 2, useCORS: true, logging: false },
+                        jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
+                    };
+                    
+                    // Stream direct system storage download arrays
+                    html2pdf().set(options).from(element).save();
                 }
             <\/script>
         </body>
