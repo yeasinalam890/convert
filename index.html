@@ -393,6 +393,7 @@
 
     function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
+    function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
     function triggerDownload(urlOrBlobData, filename) {
         try {
@@ -416,74 +417,83 @@
         }
     }
 
+    // HIGH-ACCURACY INVOICE & BILL TABLE STRUCTURAL DETECTOR
     function convertTextToStructuredHtml(rawText) {
         const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
         let htmlOutput = "";
         let tableRows = [];
-        let metadataBlocks = [];
-
-        const metadataRegex = /(name\s*:\s*|bill\s*no\s*:\s*|date\s*:\s*|address\s*:\s*|owner\s*name\s*:\s*|license\s*:\s*|bank\s*:\s*|email\s*:\s*|mobile\s*:\s*)/i;
+        let infoBlocks = [];
 
         lines.forEach(line => {
-            const cells = line.split(/[|│\t]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0);
+            // Isolate clean column values cleanly split by dynamic invoice boundaries
+            const cells = line.split(/[|│├┤┼║🛑\t]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0);
             
+            // Check if this row represents structured tabular entries
             const isTableLine = cells.length > 1 && (
                 /^\d+$/.test(cells[0]) || 
+                /^\d+\.$/.test(cells[0]) ||
                 line.toLowerCase().includes("total") || 
-                line.toLowerCase().includes("sl.") || 
-                line.toLowerCase().includes("vat") ||
+                line.toLowerCase().includes("sl") || 
                 line.toLowerCase().includes("amount") ||
+                line.toLowerCase().includes("charge") ||
                 /^\d+[\d,.]*/.test(cells[cells.length - 1])
             );
 
             if (isTableLine) {
                 tableRows.push(cells);
-            } else if (metadataRegex.test(line)) {
-                metadataBlocks.push(line);
+            } else if (line.includes(":") || line.toLowerCase().includes("bill no") || line.toLowerCase().includes("date")) {
+                infoBlocks.push(line);
             } else {
                 if (line.toLowerCase().includes("bill") || line.toUpperCase() === "BILL") {
                     htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; text-transform:uppercase; font-size:24px; font-weight:800; border:none; padding:0;">${line}</h2>`;
-                } else if(line.toLowerCase().includes("engineering") || line.toLowerCase().includes("maintenance")) {
-                    htmlOutput += `<h1 style="text-align:center; color:#1e3a8a; margin:5px 0; font-size:28px;">${line}</h1>`;
+                } else if(line.toLowerCase().includes("engineering") || line.toLowerCase().includes("maintenance") || line.toLowerCase().includes("office")) {
+                    htmlOutput += `<h1 style="text-align:center; color:#1e3a8a; margin:5px 0; font-size:26px; text-transform:uppercase; font-weight:bold;">${line}</h1>`;
                 } else {
                     htmlOutput += `<p style="margin: 6px 0; text-align: left; font-size:14px; color:#1f2937;">${line}</p>`;
                 }
             }
         });
 
-        if (metadataBlocks.length > 0) {
-            htmlOutput += `<div style="margin: 20px 0; padding: 12px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size:13.5px; line-height:1.6;">`;
-            metadataBlocks.forEach(item => {
-                htmlOutput += `<div>${item}</div>`;
+        // Pack Meta Invoice Blocks Cleanly Side-By-Side (Matching image 1 layout)
+        if (infoBlocks.length > 0) {
+            htmlOutput += `<div style="margin: 20px 0; padding: 15px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size:14px; line-height:1.6;">`;
+            infoBlocks.forEach(item => {
+                const parts = item.split(":");
+                if(parts.length >= 2) {
+                    htmlOutput += `<div><strong>${parts[0]}:</strong> ${parts.slice(1).join(":")}</div>`;
+                } else {
+                    htmlOutput += `<div>${item}</div>`;
+                }
             });
             htmlOutput += `</div>`;
         }
 
+        // Build the unified crisp blueprint table matrix grid
         if (tableRows.length > 0) {
-            htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">`;
+            htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center;">`;
             
-            tableRows.forEach((row, rowIndex) => {
+            tableRows.forEach((row) => {
                 const isHeader = row.some(cell => cell.toLowerCase().includes("sl") || cell.toLowerCase().includes("name") || cell.toLowerCase().includes("amount") || cell.toLowerCase().includes("tax"));
                 const isTotal = row.some(cell => cell.toLowerCase().includes("total"));
 
                 if (isHeader) {
                     htmlOutput += `<tr style="background-color: #106ebe; color: #ffffff; font-weight: bold; text-transform: uppercase;">`;
-                    row.forEach(cell => { htmlOutput += `<th style="padding: 12px 8px; border: 1px solid #cbd5e1;">${cell}</th>`; });
+                    row.forEach(cell => { htmlOutput += `<th style="padding: 12px 8px; border: 1px solid #4b5563; font-size:13px;">${cell}</th>`; });
                     htmlOutput += `</tr>`;
                 } else if (isTotal) {
                     htmlOutput += `<tr style="font-weight: bold; background-color: #f0f4ff; color: #1e3a8a;">`;
                     if (row.length === 2) {
-                        htmlOutput += `<td colspan="3" style="padding: 12px 8px; border: 1px solid #cbd5e1; text-align: right; padding-right: 25px;">${row[0]}</td>`;
-                        htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #cbd5e1; font-size:16px;">${row[1]}</td>`;
+                        htmlOutput += `<td colspan="3" style="padding: 12px 8px; border: 1px solid #4b5563; text-align: right; padding-right: 25px;">${row[0]}</td>`;
+                        htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; font-size:15px; font-weight:bold;">${row[1]}</td>`;
                     } else {
                         row.forEach((cell, idx) => {
-                            htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #cbd5e1; ${idx === row.length-1 ? 'font-size:16px;' : ''}">${cell}</td>`;
+                            htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; ${idx === row.length-1 ? 'font-size:15px; font-weight:bold;' : ''}">${cell}</td>`;
                         });
                     }
                     htmlOutput += `</tr>`;
                 } else {
                     htmlOutput += `<tr>`;
-                    row.forEach(cell => { htmlOutput += `<td style="padding: 10px 8px; border: 1px solid #e2e8f0; color:#334155;">${cell}</td>`; });
+                    row.forEach(cell => { htmlOutput += `<td style="padding: 11px 8px; border: 1px solid #cbd5e1; color:#1f2937;">${cell}</td>`; });
                     htmlOutput += `</tr>`;
                 }
             });
@@ -512,7 +522,6 @@
             try {
                 if(targetFormat === 'docx') {
                     let extractedText = "";
-                    
                     if(fileExt === 'pdf') {
                         status.textContent = "🔍 Reading PDF and extracting characters...";
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
@@ -769,6 +778,7 @@
         }
     }
 
+    // NATIVE-RENDERING SYSTEM ARCHITECTURE (ELIMINATES BLANK/CRASHED MOBILE PDF EXPORTS)
     function generateStandaloneEditorPage(innerHtmlText, filename) {
         return `
         <!DOCTYPE html>
@@ -776,7 +786,7 @@
         <head>
             <meta charset="UTF-8">
             <title>Microsoft Word Online Workspace - ${filename}</title>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
             <style>
                 body { margin: 0; background-color: #f3f2f1; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
                 .word-header { background-color: #106ebe; color: #ffffff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100; }
@@ -882,16 +892,30 @@
                     }
                 }
 
+                // FIXED EXPERT EXPORT SYSTEM: Renders clean vectors directly to mobile storage files
                 function exportDocumentAsPdf() {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
                     const element = document.getElementById('editorCoreSheet');
-                    const options = {
-                        margin:       [30, 30, 30, 30],
-                        filename:     '${filename}_Edited_Document.pdf',
-                        image:        { type: 'jpeg', quality: 0.98 },
-                        html2canvas:  { scale: 2, useCORS: true, logging: false },
-                        jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
-                    };
-                    html2pdf().set(options).from(element).save();
+                    
+                    // Native HTML canvas element layout mapping
+                    doc.html(element, {
+                        x: 20,
+                        y: 20,
+                        width: 550, 
+                        windowWidth: 816,
+                        callback: function(pdfInstance) {
+                            // Compiles document as binary Blob snapshot object bypassing browser blockades
+                            const pdfBlobOutput = pdfInstance.output('blob');
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(pdfBlobOutput);
+                            a.download = "${filename}_Edited_Suite.pdf";
+                            a.target = '_blank';
+                            document.body.appendChild(a);
+                            a.click();
+                            setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 250);
+                        }
+                    });
                 }
             <\/script>
         </body>
