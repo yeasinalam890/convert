@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Converter, Compressor & PDF Editor - Yeasin Alam</title>
+    <title>Universal Converter & MS Word Office Suite - Yeasin Alam</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+    
     <style>
         :root {
             --primary: #4f46e5;
             --primary-hover: #4338ca;
             --success: #10b981;
-            --danger: #ef4444;
             --bg: #f3f4f6;
             --card: #ffffff;
             --text: #1f2937;
@@ -29,26 +30,26 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             box-sizing: border-box;
         }
 
         .header-banner {
             text-align: center;
-            margin-top: 10px;
-            margin-bottom: 20px;
+            margin-top: 5px;
+            margin-bottom: 15px;
         }
 
         .header-banner h1 {
             margin: 0;
-            font-size: 36px;
+            font-size: 32px;
             color: var(--primary);
             font-weight: 800;
         }
 
         .header-banner p {
             margin: 5px 0 0 0;
-            font-size: 18px;
+            font-size: 16px;
             color: #4b5563;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -57,14 +58,14 @@
         .app-grid {
             display: flex;
             flex-direction: column;
-            gap: 25px;
+            gap: 20px;
             width: 100%;
-            max-width: 900px;
+            max-width: 1050px;
         }
 
-        .converter-container, .editor-container {
+        .converter-container, .office-container {
             background: var(--card);
-            padding: 35px;
+            padding: 25px;
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
             width: 100%;
@@ -73,7 +74,7 @@
 
         h2 {
             margin-top: 0;
-            font-size: 24px;
+            font-size: 22px;
             color: #111827;
             border-bottom: 2px solid #f3f4f6;
             padding-bottom: 10px;
@@ -81,7 +82,7 @@
 
         .drop-zone {
             border: 2px dashed #cbd5e1;
-            padding: 35px 20px;
+            padding: 25px 15px;
             border-radius: 12px;
             text-align: center;
             cursor: pointer;
@@ -94,13 +95,13 @@
             background: #eef2ff;
         }
 
-        #fileName, #editorFileName {
+        #fileName, #officeFileName {
             display: block;
             word-break: break-all;
             color: var(--primary);
             font-weight: 600;
             margin-top: 8px;
-            max-height: 120px;
+            max-height: 100px;
             overflow-y: auto;
             font-size: 13px;
         }
@@ -124,7 +125,7 @@
         select {
             border: 1px solid #d1d5db;
             background-color: #fff;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             outline: none;
         }
 
@@ -133,7 +134,7 @@
             border: 1px solid #e5e7eb;
             padding: 15px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .checkbox-container {
@@ -159,45 +160,34 @@
 
         button:hover { background-color: var(--primary-hover); }
 
-        .toolbar {
+        .office-toolbar-custom {
             display: flex;
-            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 15px;
-            background: #f8fafc;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
+            flex-wrap: wrap;
         }
 
-        .toolbar button {
+        .office-toolbar-custom button {
             width: auto;
-            flex: 1;
-            min-width: 100px;
+            padding: 10px 20px;
             font-size: 14px;
-            padding: 8px 12px;
         }
 
         .btn-success { background-color: var(--success); }
-        .btn-danger { background-color: var(--danger); }
+        .btn-success:hover { background-color: #059669; }
 
-        .workspace-frame {
+        /* Document Editor Canvas Wrapper - Simulates Desktop Software Layout */
+        .editor-paper-frame {
+            background: #6b7280;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            box-sizing: border-box;
             width: 100%;
-            overflow: auto;
-            background: #374151;
-            padding: 20px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: center;
-            max-height: 600px;
+            overflow-x: auto;
         }
 
-        .canvas-wrapper {
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            background: white;
-        }
-
-        #status, #editorStatus {
+        #status, #officeStatus {
             margin-top: 15px;
             text-align: center;
             font-size: 14px;
@@ -211,7 +201,7 @@
 
         .footer-banner {
             text-align: center;
-            margin-top: 40px;
+            margin-top: 30px;
             padding-top: 15px;
             border-top: 1px solid #e5e7eb;
             width: 100%;
@@ -227,7 +217,7 @@
 
 <div class="header-banner">
     <h1>Yeasin Alam</h1>
-    <p>File Master Pro</p>
+    <p>File Suite Ultra Pro</p>
 </div>
 
 <div class="app-grid">
@@ -269,28 +259,25 @@
         <div id="status"></div>
     </div>
 
-    <div class="editor-container">
-        <h2>2. Visual PDF Document Editor</h2>
-        <div class="drop-zone" id="editorDropZone">
-            <p>Drag & drop a PDF file here to <strong>Modify & Edit</strong></p>
-            <input type="file" id="editorFileInput" style="display: none;" accept=".pdf">
-            <span id="editorFileName"></span>
+    <div class="office-container">
+        <h2>2. Advanced Table & Document Grid Workspace</h2>
+        <div class="drop-zone" id="officeDropZone">
+            <p>Drag & drop your blurry or uneditable salary statement / <strong>.docx file</strong> here</p>
+            <input type="file" id="officeFileInput" style="display: none;" accept=".doc,.docx">
+            <span id="officeFileName"></span>
         </div>
 
-        <div id="editorWorkspace" style="display:none; margin-top:20px;">
-            <div class="toolbar">
-                <button id="addTextBtn">✏️ Add/Edit Text</button>
-                <button id="addWhiteoutBtn">⬜ Whiteout (Erase)</button>
-                <button id="deleteBtn" class="btn-danger">🗑️ Delete Object</button>
-                <button id="savePdfBtn" class="btn-success">💾 Export Edited PDF</button>
+        <div id="officeWorkspace" style="display: none; margin-top: 25px;">
+            <div class="office-toolbar-custom">
+                <button id="exportDocxBtn" class="btn-success">💾 Export as Clean Word Document (.docx)</button>
+                <button id="exportPdfBtn">📄 Export as PDF Document (.pdf)</button>
             </div>
-            <div class="workspace-frame">
-                <div class="canvas-wrapper">
-                    <canvas id="pdfCanvas"></canvas>
-                </div>
+            
+            <div class="editor-paper-frame">
+                <textarea id="wordEditor"></textarea>
             </div>
         </div>
-        <div id="editorStatus"></div>
+        <div id="officeStatus"></div>
     </div>
 </div>
 
@@ -301,7 +288,10 @@
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    // UI elements mapping 
+    let editorInstance = null;
+    let loadedDocBaseName = "Document Workspace";
+
+    // Global Converter System Mappings
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
@@ -313,61 +303,35 @@
     const qualityVal = document.getElementById('qualityVal');
     const status = document.getElementById('status');
 
-    // Editor tracking pointers
-    let fabricCanvas = null;
-    let originalPdfDimensions = { width: 0, height: 0 };
-    let pdfFileBaseName = "document";
-
-    // Trigger setups
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
     dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
+        e.preventDefault(); dropZone.classList.remove('drag-over');
         if(e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; updateFileNameDisplay(); }
     });
     fileInput.addEventListener('change', updateFileNameDisplay);
 
     function updateFileNameDisplay() {
-        const totalFiles = fileInput.files.length;
-        if(totalFiles === 1) fileName.textContent = `📄 ${fileInput.files[0].name}`;
-        else if (totalFiles > 1) fileName.innerHTML = `<strong>Selected ${totalFiles} files:</strong><br>` + Array.from(fileInput.files).map(f => `• ${f.name}`).join('<br>');
+        const len = fileInput.files.length;
+        if(len === 1) fileName.textContent = `📄 ${fileInput.files[0].name}`;
+        else if (len > 1) fileName.innerHTML = `<strong>Selected ${len} files:</strong><br>` + Array.from(fileInput.files).map(f => `• ${f.name}`).join('<br>');
     }
 
     compressCheck.addEventListener('change', () => { sliderPanel.style.display = compressCheck.checked ? 'block' : 'none'; });
     qualityRange.addEventListener('input', () => { qualityVal.textContent = qualityRange.value + '%'; });
 
-    function loadImage(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (e) => {
-                const img = new Image();
-                img.src = e.target.result;
-                img.onload = () => resolve(img);
-            };
-        });
-    }
+    function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
+    function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
+    function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
-    function readFileAsBuffer(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsArrayBuffer(file);
-            reader.onload = (e) => resolve(e.target.result);
-        });
-    }
-
-    function getBlobFromCanvas(canvas, mime, quality) { return new Promise(resolve => canvas.toBlob(resolve, mime, quality)); }
-
-    // Conversion Runner Execution
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files;
-        if (!files.length) { alert('Select files first.'); return; }
-        status.className = "status-loading";
+        if(!files.length) { alert('Upload files first.'); return; }
+        status.className = "status-loading"; status.textContent = "Processing batch layouts...";
         let successCount = 0;
 
-        for (let i = 0; i < files.length; i++) {
+        for(let i=0; i<files.length; i++) {
             const file = files[i];
             const fileExt = file.name.split('.').pop().toLowerCase();
             const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
@@ -375,241 +339,215 @@
             const quality = compressCheck.checked ? (qualityRange.value / 100) : 0.92;
 
             try {
-                if (targetFormat === 'docx') {
-                    let imageBlobsArray = [];
-                    if (fileExt === 'pdf') {
-                        const arrayBuffer = await readFileAsBuffer(file);
-                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-                        for (let p = 1; p <= pdf.numPages; p++) {
-                            const page = await pdf.getPage(p);
-                            const viewport = page.getViewport({ scale: 1.5 });
-                            const canvas = document.createElement('canvas');
-                            canvas.height = viewport.height; canvas.width = viewport.width;
-                            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                            const blob = await getBlobFromCanvas(canvas, 'image/jpeg', quality);
-                            imageBlobsArray.push({ blob, w: canvas.width, h: canvas.height });
+                if(targetFormat === 'docx') {
+                    let blobs = [];
+                    if(fileExt === 'pdf') {
+                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
+                        for(let p=1; p<=pdf.numPages; p++) {
+                            const page = await pdf.getPage(p); const vp = page.getViewport({ scale: 1.5 });
+                            const cv = document.createElement('canvas'); cv.height = vp.height; cv.width = vp.width;
+                            await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+                            blobs.push({ blob: await getBlobFromCanvas(cv, 'image/jpeg', quality), w: cv.width, h: cv.height });
                         }
-                    } else if (fileExt === 'docx' || fileExt === 'doc') {
-                        const arrayBuffer = await readFileAsBuffer(file);
-                        triggerDownload(URL.createObjectURL(new Blob([arrayBuffer])), `${baseName}_copy.${fileExt}`);
+                    } else if(fileExt === 'docx' || fileExt === 'doc') {
+                        triggerDownload(URL.createObjectURL(new Blob([await readFileAsBuffer(file)])), `${baseName}_copy.${fileExt}`);
                     } else {
-                        const img = await loadImage(file);
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width; canvas.height = img.height;
-                        canvas.getContext('2d').drawImage(img, 0, 0);
-                        const blob = await getBlobFromCanvas(canvas, 'image/jpeg', quality);
-                        imageBlobsArray.push({ blob, w: img.width, h: img.height });
+                        const img = await loadImage(file); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+                        cv.getContext('2d').drawImage(img, 0, 0);
+                        blobs.push({ blob: await getBlobFromCanvas(cv, 'image/jpeg', quality), w: img.width, h: img.height });
                     }
-
-                    if (imageBlobsArray && imageBlobsArray.length) {
-                        const childrenElements = imageBlobsArray.map(imgData => {
-                            const scaleFactor = imgData.w > 550 ? (550 / imgData.w) : 1;
-                            return new docx.Paragraph({
-                                children: [new docx.ImageRun({ data: imgData.blob, transformation: { width: imgData.w * scaleFactor, height: imgData.h * scaleFactor } })]
-                            });
-                        });
-                        const doc = new docx.Document({ sections: [{ children: childrenElements }] });
-                        const docBlob = await docx.Packer.toBlob(doc);
+                    if(blobs.length) {
+                        const children = blobs.map(b => { const sf = b.w > 550 ? (550 / b.w) : 1; return new docx.Paragraph({ children: [new docx.ImageRun({ data: b.blob, transformation: { width: b.w * sf, height: b.h * sf } })] }); });
+                        const docBlob = await docx.Packer.toBlob(new docx.Document({ sections: [{ children }] }));
                         triggerDownload(URL.createObjectURL(docBlob), `${baseName}_converted.docx`);
                     }
                     successCount++;
                 } else {
-                    if (fileExt === 'pdf') {
-                        const arrayBuffer = await readFileAsBuffer(file);
-                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-                        for (let p = 1; p <= pdf.numPages; p++) {
-                            const page = await pdf.getPage(p);
-                            const viewport = page.getViewport({ scale: 2.0 });
-                            const canvas = document.createElement('canvas');
-                            canvas.height = viewport.height; canvas.width = viewport.width;
-                            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                            const outFormat = targetFormat || 'jpeg';
-                            triggerDownload(canvas.toDataURL(`image/${outFormat}`, quality), `${baseName}_page_${p}.${outFormat}`);
+                    if(fileExt === 'pdf') {
+                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
+                        for(let p=1; p<=pdf.numPages; p++) {
+                            const page = await pdf.getPage(p); const vp = page.getViewport({ scale: 2.0 });
+                            const cv = document.createElement('canvas'); cv.height = vp.height; cv.width = vp.width;
+                            await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+                            triggerDownload(cv.toDataURL(`image/${targetFormat || 'jpeg'}`, quality), `${baseName}_page_${p}.${targetFormat || 'jpeg'}`);
                         }
                         successCount++;
-                    } else if (fileExt === 'docx' || fileExt === 'doc') {
-                        const arrayBuffer = await readFileAsBuffer(file);
-                        const result = await mammoth.convertToHtml({ arrayBuffer });
-                        if (targetFormat === 'pdf' || targetFormat === '') {
+                    } else if(fileExt === 'docx' || fileExt === 'doc') {
+                        const resHtml = await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) });
+                        if(targetFormat === 'pdf' || targetFormat === '') {
                             const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-                            await pdf.html(result.value, { x: 40, y: 40, width: 515, windowWidth: 650 });
+                            await pdf.html(resHtml.value, { x: 40, y: 40, width: 515, windowWidth: 650 });
                             pdf.save(`${baseName}_converted.pdf`);
                         } else {
-                            const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = 1000;
-                            const ctx = canvas.getContext('2d'); ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000);
-                            ctx.fillStyle = "black"; ctx.font = "16px Arial";
-                            const lines = result.value.replace(/<[^>]*>/g, '\n').split('\n').filter(l => l.trim() !== '');
-                            lines.forEach((line, index) => { ctx.fillText(line, 40, 50 + (index * 25)); });
-                            triggerDownload(canvas.toDataURL(`image/${targetFormat}`, quality), `${baseName}_converted.${targetFormat}`);
+                            const cv = document.createElement('canvas'); cv.width = 800; cv.height = 1000; const ctx = cv.getContext('2d');
+                            ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000); ctx.fillStyle = "black"; ctx.font = "16px Arial";
+                            const lines = resHtml.value.replace(/<[^>]*>/g, '\n').split('\n').filter(l => l.trim() !== '');
+                            lines.forEach((l, idx) => ctx.fillText(l, 40, 50 + (idx * 25)));
+                            triggerDownload(cv.toDataURL(`image/${targetFormat}`, quality), `${baseName}_converted.${targetFormat}`);
                         }
                         successCount++;
                     } else {
-                        const img = await loadImage(file);
-                        const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
-                        canvas.getContext('2d').drawImage(img, 0, 0);
-                        if (targetFormat === 'pdf') {
+                        const img = await loadImage(file); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+                        cv.getContext('2d').drawImage(img, 0, 0);
+                        if(targetFormat === 'pdf') {
                             const pdf = new jspdf.jsPDF({ orientation: img.width > img.height ? 'l' : 'p', unit: 'px', format: [img.width, img.height] });
-                            pdf.addImage(canvas.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height);
-                            pdf.save(`${baseName}_processed.pdf`);
+                            pdf.addImage(cv.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height); pdf.save(`${baseName}_processed.pdf`);
                         } else {
-                            let mime = targetFormat ? `image/${targetFormat}` : file.type;
-                            triggerDownload(canvas.toDataURL(mime, quality), `${baseName}_processed.${targetFormat || fileExt}`);
+                            triggerDownload(cv.toDataURL(`image/${targetFormat || fileExt}`, quality), `${baseName}_processed.${targetFormat || fileExt}`);
                         }
                         successCount++;
                     }
                 }
-            } catch (err) { console.error(err); }
+            } catch(e) { console.error(e); }
         }
-        status.className = "status-success";
-        status.textContent = `Completed processing batch pipeline.`;
+        status.className = "status-success"; status.textContent = `Processed ${successCount} files safely.`;
     });
 
-    function triggerDownload(url, filename) {
-        const a = document.createElement('a'); a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click(); a.remove();
-    }
+    function triggerDownload(url, fn) { const a = document.createElement('a'); a.href = url; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); }
 
     // ==========================================
-    // ADVANCED EDIT ENGINE CODE (SECTION 2 LOGIC)
+    // SECTION 2: LIVE MS OFFICE GRID/TABLE CODE
     // ==========================================
-    const editorDropZone = document.getElementById('editorDropZone');
-    const editorFileInput = document.getElementById('editorFileInput');
-    const editorFileName = document.getElementById('editorFileName');
-    const editorWorkspace = document.getElementById('editorWorkspace');
-    const editorStatus = document.getElementById('editorStatus');
+    const officeDropZone = document.getElementById('officeDropZone');
+    const officeFileInput = document.getElementById('officeFileInput');
+    const officeFileName = document.getElementById('officeFileName');
+    const officeWorkspace = document.getElementById('officeWorkspace');
+    const officeStatus = document.getElementById('officeStatus');
 
-    editorDropZone.addEventListener('click', () => editorFileInput.click());
-    editorDropZone.addEventListener('dragover', (e) => { e.preventDefault(); editorDropZone.classList.add('drag-over'); });
-    editorDropZone.addEventListener('dragleave', () => editorDropZone.classList.remove('drag-over'));
-    editorDropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        editorDropZone.classList.remove('drag-over');
-        if(e.dataTransfer.files.length) { editorFileInput.files = e.dataTransfer.files; initPdfEditor(); }
+    officeDropZone.addEventListener('click', () => officeFileInput.click());
+    officeDropZone.addEventListener('dragover', (e) => { e.preventDefault(); officeDropZone.classList.add('drag-over'); });
+    officeDropZone.addEventListener('dragleave', () => officeDropZone.classList.remove('drag-over'));
+    officeDropZone.addEventListener('drop', (e) => {
+        e.preventDefault(); officeDropZone.classList.remove('drag-over');
+        if(e.dataTransfer.files.length) { officeFileInput.files = e.dataTransfer.files; initWordSuiteEditor(); }
     });
-    editorFileInput.addEventListener('change', initPdfEditor);
+    officeFileInput.addEventListener('change', initWordSuiteEditor);
 
-    async function initPdfEditor() {
-        const file = editorFileInput.files[0];
+    async function initWordSuiteEditor() {
+        const file = officeFileInput.files[0];
         if(!file) return;
-        
-        pdfFileBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        editorFileName.textContent = `Editing: ${file.name}`;
-        editorStatus.className = "status-loading";
-        editorStatus.textContent = "Importing layers into vector matrix. Please wait...";
+
+        loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        officeFileName.textContent = `Active Table Sheet: ${file.name}`;
+        officeStatus.className = "status-loading";
+        officeStatus.textContent = "Loading grid models... Hold tight.";
 
         try {
-            const arrayBuffer = await readFileAsBuffer(file);
-            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+            const buffer = await readFileAsBuffer(file);
             
-            // Edit Page 1 of document directly inside standard viewport
-            const page = await pdf.getPage(1);
-            const viewport = page.getViewport({ scale: 1.5 });
-
-            originalPdfDimensions.width = viewport.width;
-            originalPdfDimensions.height = viewport.height;
-
-            // Render PDF onto hidden viewport target
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = viewport.width;
-            tempCanvas.height = viewport.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            await page.render({ canvasContext: tempCtx, viewport }).promise;
-
-            // Mount fabric canvas layer directly over background frame sheet
-            if(fabricCanvas) { fabricCanvas.dispose(); }
+            const parseOptions = {
+                styleMap: [
+                    "p[style-name='Table Heading'] => h3:fresh",
+                    "table => table.office-grid-table"
+                ]
+            };
+            const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer }, parseOptions);
             
-            const rawCanvasEl = document.getElementById('pdfCanvas');
-            rawCanvasEl.width = viewport.width;
-            rawCanvasEl.height = viewport.height;
+            let sanitizedHtml = parseResult.value;
+            if(!sanitizedHtml.includes('<table')) {
+                sanitizedHtml = `<table border="1" style="width:100%; border-collapse:collapse; min-width:600px;"><tr><td>${sanitizedHtml}</td></tr></table>`;
+            } else {
+                sanitizedHtml = sanitizedHtml.replace(/<table/g, '<table border="1" style="width:100%; border-collapse:collapse; min-width:700px; font-size:14px; text-align:center;" cellpadding="5"');
+            }
 
-            fabricCanvas = new fabric.Canvas('pdfCanvas');
+            if (tinymce.get('wordEditor')) {
+                tinymce.get('wordEditor').setContent(sanitizedHtml);
+            } else {
+                await tinymce.init({
+                    selector: '#wordEditor',
+                    plugins: 'table lists advlist image code link directionality charmap preview emoticons',
+                    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | table tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | bullist numlist | ltr rtl | removeformat',
+                    height: 500,
+                    menubar: true,
+                    table_default_styles: { width: '100%', borderCollapse: 'collapse' },
+                    content_style: 'body { font-family:sans-serif; margin:20px; } table { width:100%; border-collapse:collapse; margin-bottom:10px; } td, th { border:1px solid #9ca3af; padding:6px; min-width:50px; word-break:break-word; } th { background-color:#f3f4f6; }',
+                    setup: function (editor) {
+                        editorInstance = editor;
+                    }
+                });
+                tinymce.get('wordEditor').setContent(sanitizedHtml);
+            }
 
-            // Apply background vector print out image logic
-            fabric.Image.fromURL(tempCanvas.toDataURL(), function(img) {
-                fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas));
-            });
-
-            editorWorkspace.style.display = "block";
-            editorStatus.className = "status-success";
-            editorStatus.textContent = "PDF Loaded! Use the tools above to overlay edits or whiteout text blocks.";
-        } catch(e) {
-            editorStatus.className = "status-error";
-            editorStatus.textContent = "Failed to load PDF editor viewport layout.";
-            console.error(e);
+            officeWorkspace.style.display = "block";
+            officeStatus.className = "status-success";
+            officeStatus.textContent = "Grid synchronized! You can now tap cells to change text, right-click to delete/add columns or rows cleanly.";
+        } catch(err) {
+            officeStatus.className = "status-error";
+            officeStatus.textContent = "Failed to sync spreadsheet formatting nodes.";
+            console.error(err);
         }
     }
 
-    // Toolbar Operations
-    document.getElementById('addTextBtn').addEventListener('click', () => {
-        if(!fabricCanvas) return;
-        const textObject = new fabric.IText('Double click to edit text', {
-            left: 50,
-            top: 50,
-            fontFamily: 'Segoe UI',
-            fontSize: 18,
-            fill: '#000000',
-            selectable: true
-        });
-        fabricCanvas.add(textObject);
-        fabricCanvas.setActiveObject(textObject);
-    });
+    // EXPORT TO MS WORD SUITE
+    document.getElementById('exportDocxBtn').addEventListener('click', async () => {
+        if(!editorInstance) return;
+        officeStatus.className = "status-loading";
+        officeStatus.textContent = "Packing clean text blocks back to Word binary layers...";
 
-    document.getElementById('addWhiteoutBtn').addEventListener('click', () => {
-        if(!fabricCanvas) return;
-        // Creates a white block to cover underlying text seamlessly
-        const rect = new fabric.Rect({
-            left: 80,
-            top: 80,
-            fill: '#ffffff',
-            width: 150,
-            height: 30,
-            selectable: true,
-            stroke: '#cbd5e1',
-            strokeWidth: 1
-        });
-        fabricCanvas.add(rect);
-        fabricCanvas.setActiveObject(rect);
-    });
+        try {
+            const editorHtml = editorInstance.getContent();
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = editorHtml;
+            const rowsHtml = tempDiv.querySelectorAll('tr');
 
-    document.getElementById('deleteBtn').addEventListener('click', () => {
-        if(!fabricCanvas) return;
-        const active = fabricCanvas.getActiveObject();
-        if(active) {
-            fabricCanvas.remove(active);
+            let docParagraphs = [];
+
+            if (rowsHtml.length > 0) {
+                rowsHtml.forEach(row => {
+                    const cells = row.querySelectorAll('td, th');
+                    const cellTexts = Array.from(cells).map(c => c.innerText.trim()).join(' | ');
+                    if(cellTexts.replace(/\|/g, '').trim() !== "") {
+                        docParagraphs.push(new docx.Paragraph({
+                            children: [new docx.TextRun({ text: cellTexts, font: "Segoe UI", size: 22 })],
+                            spacing: { after: 120 }
+                        }));
+                    }
+                });
+            } else {
+                const textLines = tempDiv.innerText.split('\n').filter(line => line.trim() !== '');
+                docParagraphs = textLines.map(line => new docx.Paragraph({
+                    children: [new docx.TextRun({ text: line, font: "Segoe UI", size: 24 })]
+                }));
+            }
+
+            const doc = new docx.Document({ sections: [{ children: docParagraphs }] });
+            const blob = await docx.Packer.toBlob(doc);
+            
+            triggerDownload(URL.createObjectURL(blob), `${loadedDocBaseName}_edited.docx`);
+            officeStatus.className = "status-success";
+            officeStatus.textContent = "Word grid document generated successfully!";
+        } catch(err) {
+            officeStatus.className = "status-error";
+            officeStatus.textContent = "Error compiling file assets.";
+            console.error(err);
         }
     });
 
-    document.getElementById('savePdfBtn').addEventListener('click', async () => {
-        if(!fabricCanvas) return;
-        
-        editorStatus.className = "status-loading";
-        editorStatus.textContent = "Exporting your modified vectors back into a new PDF blueprint...";
+    // EXPORT TO PDF DOCUMENT
+    document.getElementById('exportPdfBtn').addEventListener('click', async () => {
+        if(!editorInstance) return;
+        officeStatus.className = "status-loading";
+        officeStatus.textContent = "Flattening layouts straight to an A4 PDF document...";
 
-        // De-select current bounding box views to avoid freezing the border frames inside final download print outputs
-        fabricCanvas.discardActiveObject().renderAll();
+        try {
+            const htmlContent = editorInstance.getContent();
+            const pdf = new jspdf.jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
+            
+            await pdf.html(htmlContent, {
+                x: 20, y: 30,
+                width: 750,
+                windowWidth: 900
+            });
 
-        setTimeout(() => {
-            try {
-                const finalDataUrl = fabricCanvas.toDataURL({ format: 'jpeg', quality: 1.0 });
-                const { jsPDF } = window.jspdf;
-                
-                const pdf = new jsPDF({
-                    orientation: originalPdfDimensions.width > originalPdfDimensions.height ? 'l' : 'p',
-                    unit: 'px',
-                    format: [originalPdfDimensions.width, originalPdfDimensions.height]
-                });
-
-                pdf.addImage(finalDataUrl, 'JPEG', 0, 0, originalPdfDimensions.width, originalPdfDimensions.height);
-                pdf.save(`${pdfFileBaseName}_edited_${Date.now()}.pdf`);
-
-                editorStatus.className = "status-success";
-                editorStatus.textContent = "PDF Saved successfully!";
-            } catch(e) {
-                editorStatus.className = "status-error";
-                editorStatus.textContent = "Failed to export PDF binary formatting pipelines.";
-                console.error(e);
-            }
-        }, 300);
+            pdf.save(`${loadedDocBaseName}_edited.pdf`);
+            officeStatus.className = "status-success";
+            officeStatus.textContent = "PDF document exported successfully!";
+        } catch(err) {
+            officeStatus.className = "status-error";
+            officeStatus.textContent = "PDF matrix formatting failed.";
+            console.error(err);
+        }
     });
 </script>
 </body>
