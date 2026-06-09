@@ -376,10 +376,7 @@
     function updateFileNameDisplay() {
         const len = fileInput.files.length;
         currentInputFileTotalSize = 0;
-        
-        for(let i=0; i<len; i++) {
-            currentInputFileTotalSize += fileInput.files[i].size;
-        }
+        for(let i=0; i<len; i++) { currentInputFileTotalSize += fileInput.files[i].size; }
 
         if(len === 1) {
             fileName.textContent = `📄 ${fileInput.files[0].name} (${formatBytes(currentInputFileTotalSize)})`;
@@ -393,7 +390,6 @@
         sliderPanel.style.display = compressCheck.checked ? 'block' : 'none'; 
         calculateLiveCompressionEstimate();
     });
-    
     qualityRange.addEventListener('input', () => { 
         qualityVal.textContent = qualityRange.value + '%'; 
         calculateLiveCompressionEstimate();
@@ -406,8 +402,6 @@
         }
         compressionEstimate.style.display = "inline-block";
         const targetPct = qualityRange.value;
-        
-        // Use an optimization curve matching real canvas compression parameters
         let modifier = 0.95; 
         if(targetPct < 30) modifier = 0.35;
         else if (targetPct < 60) modifier = 0.55;
@@ -415,13 +409,42 @@
 
         const estimatedSize = Math.round(currentInputFileTotalSize * (targetPct / 100) * modifier);
         const reductionPct = Math.round(((currentInputFileTotalSize - estimatedSize) / currentInputFileTotalSize) * 100);
-
         compressionEstimate.textContent = `📊 Target: ${targetPct}% Quality Selection | Estimated Output size: ~${formatBytes(estimatedSize)} (Saved roughly ${reductionPct}% space)`;
     }
 
     function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
     function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
+
+    // UNIVERSAL MOBILE-FRIENDLY DOWNLOAD FORCING ENGINE
+    function triggerDownload(urlOrBlobData, filename) {
+        try {
+            const a = document.createElement('a');
+            
+            // If it's raw Blob binary format, create an explicit Object URL configuration
+            if (urlOrBlobData instanceof Blob) {
+                a.href = URL.createObjectURL(urlOrBlobData);
+            } else {
+                a.href = urlOrBlobData;
+            }
+            
+            a.download = filename;
+            a.target = '_blank'; // Fixes sandboxed blockades inside native app viewports
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean memory cache allocation traces after thread tick completes
+            setTimeout(() => {
+                a.remove();
+                if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href);
+            }, 200);
+        } catch (err) {
+            console.error("Standard sandbox click intercepted. Firing fallback anchor system...", err);
+            // Fallback: If browser completely drops program anchor clicks, open direct byte stream in new window tab
+            const targetDataStream = (urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData;
+            window.open(targetDataStream, '_blank');
+        }
+    }
 
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files;
@@ -450,7 +473,8 @@
                             blobs.push({ blob: await getBlobFromCanvas(cv, 'image/jpeg', quality), w: cv.width, h: cv.height });
                         }
                     } else if(fileExt === 'docx' || fileExt === 'doc') {
-                        triggerDownload(URL.createObjectURL(new Blob([await readFileAsBuffer(file)])), `${baseName}_copy.${fileExt}`);
+                        const buffer = await readFileAsBuffer(file);
+                        triggerDownload(new Blob([buffer], { type: file.type }), `${baseName}_copy.${fileExt}`);
                     } else {
                         const img = await loadImage(file); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
                         cv.getContext('2d').drawImage(img, 0, 0);
@@ -459,7 +483,7 @@
                     if(blobs.length) {
                         const children = blobs.map(b => { const sf = b.w > 550 ? (550 / b.w) : 1; return new docx.Paragraph({ children: [new docx.ImageRun({ data: b.blob, transformation: { width: b.w * sf, height: b.h * sf } })] }); });
                         const docBlob = await docx.Packer.toBlob(new docx.Document({ sections: [{ children }] }));
-                        triggerDownload(URL.createObjectURL(docBlob), `${baseName}_converted.docx`);
+                        triggerDownload(docBlob, `${baseName}_converted.docx`);
                     }
                     successCount++;
                 } else {
@@ -477,7 +501,10 @@
                         if(targetFormat === 'pdf' || targetFormat === '') {
                             const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
                             await pdf.html(resHtml.value, { x: 40, y: 40, width: 515, windowWidth: 650 });
-                            pdf.save(`${baseName}_converted.pdf`);
+                            
+                            // Native jsPDF output wrapper handled as binary Blob configurations
+                            const pdfOutputBlob = pdf.output('blob');
+                            triggerDownload(pdfOutputBlob, `${baseName}_converted.pdf`);
                         } else {
                             const cv = document.createElement('canvas'); cv.width = 800; cv.height = 1000; const ctx = cv.getContext('2d');
                             ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000); ctx.fillStyle = "black"; ctx.font = "16px Arial";
@@ -491,7 +518,8 @@
                         cv.getContext('2d').drawImage(img, 0, 0);
                         if(targetFormat === 'pdf') {
                             const pdf = new jspdf.jsPDF({ orientation: img.width > img.height ? 'l' : 'p', unit: 'px', format: [img.width, img.height] });
-                            pdf.addImage(cv.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height); pdf.save(`${baseName}_processed.pdf`);
+                            pdf.addImage(cv.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height);
+                            triggerDownload(pdf.output('blob'), `${baseName}_processed.pdf`);
                         } else {
                             triggerDownload(cv.toDataURL(`image/${targetFormat || fileExt}`, quality), `${baseName}_processed.${targetFormat || fileExt}`);
                         }
@@ -538,7 +566,6 @@
         scannerStatus.textContent = "Photo loaded into visual canvas buffer configuration frame.";
     }
 
-    // COLOR-PRESERVING SHARPNESS & CONTRAST FILTER PIPELINE
     document.getElementById('enhanceClearBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
@@ -547,18 +574,11 @@
         setTimeout(() => {
             sCtx.drawImage(scannerImageObject, 0, 0);
             const imgData = sCtx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
-            const d = imgData.data;
-            const w = imgData.width;
-            const h = imgData.height;
+            const d = imgData.data; const w = imgData.width; const h = imgData.height;
             
-            // Create buffer copy array to do matrix transformations
             const outputBuffer = sCtx.createImageData(w, h);
             const outData = outputBuffer.data;
 
-            // 3x3 Sharpen Convolution Grid Array Matrix Map
-            //  0  -1   0
-            // -1   5  -1
-            //  0  -1   0
             const weights = [
                  0, -1,  0,
                 -1,  5, -1,
@@ -570,7 +590,6 @@
                     let sy = y * w * 4 + x * 4;
                     let rAccum = 0, gAccum = 0, bAccum = 0;
 
-                    // Matrix convolution calculations over adjacent pixels
                     for (let cy = -1; cy <= 1; cy++) {
                         for (let cx = -1; cx <= 1; cx++) {
                             let scy = (y + cy) * w * 4 + (x + cx) * 4;
@@ -582,14 +601,11 @@
                         }
                     }
 
-                    // Brightness equalization loop targeting fogs and shadows
-                    let avgLuminance = (0.2126 * rAccum + 0.7152 * gAccum + 0.0722 * bAccum);
-                    let contrastFactor = 1.25; // Enhance cell color depth boundaries
-
-                    outData[sy]     = Math.min(255, Math.max(0, ((rAccum - 128) * contrastFactor) + 138)); // Red
-                    outData[sy + 1] = Math.min(255, Math.max(0, ((gAccum - 128) * contrastFactor) + 138)); // Green
-                    outData[sy + 2] = Math.min(255, Math.max(0, ((bAccum - 128) * contrastFactor) + 138)); // Blue
-                    outData[sy + 3] = d[sy + 3]; // Alpha channel stability map
+                    let contrastFactor = 1.25; 
+                    outData[sy]     = Math.min(255, Math.max(0, ((rAccum - 128) * contrastFactor) + 138)); 
+                    outData[sy + 1] = Math.min(255, Math.max(0, ((gAccum - 128) * contrastFactor) + 138)); 
+                    outData[sy + 2] = Math.min(255, Math.max(0, ((bAccum - 128) * contrastFactor) + 138)); 
+                    outData[sy + 3] = d[sy + 3]; 
                 }
             }
             sCtx.putImageData(outputBuffer, 0, 0);
@@ -610,7 +626,7 @@
             format: [scannerCanvas.width, scannerCanvas.height]
         });
         pdf.addImage(outUrl, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height);
-        pdf.save(`Clean_Scan_${Date.now()}.pdf`);
+        triggerDownload(pdf.output('blob'), `Clean_Scan_${Date.now()}.pdf`);
         
         scannerStatus.className = "status-success";
         scannerStatus.textContent = "✅ Action [Convert to PDF] Completed! File download complete.";
@@ -634,7 +650,6 @@
 
         officeWorkspace.style.display = "block";
         officeFileName.textContent = "Imported from Photo Cleaner Workspace";
-        
         mountTinyMCE(contentStructure);
         
         document.getElementById('officeWorkspace').scrollIntoView({ behavior: 'smooth' });
@@ -756,8 +771,8 @@
             }
 
             const doc = new docx.Document({ sections: [{ children: docParagraphs }] });
-            const blob = await docx.Packer.toBlob(doc);
-            triggerDownload(URL.createObjectURL(blob), `${loadedDocBaseName}_edited.docx`);
+            const docxBlob = await docx.Packer.toBlob(doc);
+            triggerDownload(docxBlob, `${loadedDocBaseName}_edited.docx`);
             
             officeStatus.className = "status-success"; 
             officeStatus.textContent = "✅ Action [Export as Clean Word Document] Completed successfully!";
@@ -776,7 +791,8 @@
             const htmlContent = editorInstance.getContent();
             const pdf = new jspdf.jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
             await pdf.html(htmlContent, { x: 20, y: 30, width: 750, windowWidth: 900 });
-            pdf.save(`${loadedDocBaseName}_edited.pdf`);
+            
+            triggerDownload(pdf.output('blob'), `${loadedDocBaseName}_edited.pdf`);
             
             officeStatus.className = "status-success"; 
             officeStatus.textContent = "✅ Action [Export as PDF Document] Completed successfully!";
