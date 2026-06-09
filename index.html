@@ -206,7 +206,7 @@
             user-select: none;
         }
 
-        /* Fullscreen Integrated Office Viewport Overlay */
+        /* Fullscreen Integrated Office Viewport Overlays */
         .office-fullscreen-modal {
             position: fixed;
             top: 0;
@@ -255,7 +255,7 @@
         th { background-color: #106ebe; color: #ffffff; font-weight: 600; }
         td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
 
-        /* Dialog Export Modal Box Layout */
+        /* Dialog Export Popup Windows Overlay */
         .dialog-modal-overlay {
             position: fixed;
             top: 0;
@@ -285,6 +285,44 @@
         .dialog-btn-stack button { padding: 12px; font-weight: 600; border-radius: 6px; }
         .btn-secondary { background-color: #f3f4f6; color: #374151; }
         .btn-secondary:hover { background-color: #e5e7eb; }
+
+        /* NEW VISUAL DOWNLOADING POPUP NOTIFICATION MODAL CARD */
+        .downloading-toast-popup {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1e1e2e;
+            color: #ffffff;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            display: none;
+            align-items: center;
+            gap: 15px;
+            z-index: 9999999;
+            border: 1px solid rgba(255,255,255,0.1);
+            animation: slideUpIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .spinner-loader {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: #89b4fa;
+            border-radius: 50%;
+            animation: spinCircle 0.8s linear infinite;
+        }
+
+        .toast-content-title { font-size: 14px; font-weight: 600; margin: 0; color: #ffffff; }
+        .toast-content-desc { font-size: 12px; color: #a6adc8; margin: 3px 0 0 0; }
+
+        @keyframes slideUpIn {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes spinCircle {
+            to { transform: rotate(360deg); }
+        }
 
         #status, #scannerStatus, #officeStatus, #modalStatusMsg {
             margin-top: 15px;
@@ -427,14 +465,15 @@
     </div>
 </div>
 
+<div class="downloading-toast-popup" id="downloadToast">
+    <div class="spinner-loader"></div>
+    <div class="toast-content-wrapper">
+        <h4 class="toast-content-title" id="toastTitle">Downloading...</h4>
+        <p class="toast-content-desc" id="toastDesc">Compiling data snapshot pipelines...</p>
+    </div>
+</div>
+
 <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    let loadedDocBaseName = "Document Workspace";
-    let scannerImageObject = null;
-    let currentInputFileTotalSize = 0;
-
-    // Core conversion UI mapping
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
     const convertBtn = document.getElementById('convertBtn');
@@ -446,7 +485,6 @@
     const status = document.getElementById('status');
     const compressionEstimate = document.getElementById('compressionEstimate');
 
-    // Section 3 workspace mapping
     const officeFileInput = document.getElementById('officeFileInput');
     const officeFileName = document.getElementById('officeFileName');
     const officeStatus = document.getElementById('officeStatus');
@@ -454,9 +492,12 @@
     const editorCoreSheet = document.getElementById('editorCoreSheet');
     const modalDocTitle = document.getElementById('modalDocTitle');
     const modalStatusMsg = document.getElementById('modalStatusMsg');
-
-    // Dialog menu selector mapping
     const dialogModal = document.getElementById('dialogModal');
+
+    // Toast alert triggers mapping
+    const downloadToast = document.getElementById('downloadToast');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastDesc = document.getElementById('toastDesc');
 
     document.getElementById('dropZone').addEventListener('click', () => fileInput.click());
     document.getElementById('dropZone').addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); });
@@ -499,91 +540,97 @@
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
     function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
+    // DYNAMIC STATUS TOAST LAUNCH HANDLERS
+    function showDownloadToast(title, description) {
+        toastTitle.textContent = title;
+        toastDesc.textContent = description;
+        downloadToast.style.display = "flex";
+    }
+
+    function hideDownloadToast() {
+        downloadToast.style.display = "none";
+    }
+
     function triggerDownload(urlOrBlobData, filename) {
+        showDownloadToast("Downloading File...", filename);
         try {
             const a = document.createElement('a');
             a.href = (urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData;
             a.download = filename;
             document.body.appendChild(a); a.click();
-            setTimeout(() => { a.remove(); if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href); }, 200);
+            setTimeout(() => { a.remove(); if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href); hideDownloadToast(); }, 1200);
         } catch (err) {
             window.open((urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData, '_blank');
+            setTimeout(hideDownloadToast, 1500);
         }
     }
 
-    // AI TEXT & MATRIX LAYOUT GENERATION ALGORITHM ENGINE
     function convertTextToStructuredHtml(rawText) {
         const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-        let htmlOutput = ""; let tableRows = []; let infoBlocks = [];
+        let htmlOutput = ""; let infoBlocks = []; let itemsArray = []; let grandTotalLine = "";
         const metadataRegex = /(name\s*:\s*|bill\s*no\s*:\s*|date\s*:\s*|address\s*:\s*|owner\s*name\s*:\s*|license\s*:\s*|bank\s*:\s*|email\s*:\s*|mobile\s*:\s*|tin\s*no\s*:\s*|biin\s*:\s*|e-tin\s*:\s*)/i;
 
         lines.forEach(line => {
-            const cells = line.split(/[|│├┤┼║🛑\t,-]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0 && c !== '"');
-            const isTableLine = cells.length > 1 && (
-                /^\d+$/.test(cells[0]) || /^\d+\.$/.test(cells[0]) ||
-                line.toLowerCase().includes("total") || line.toLowerCase().includes("sl") || 
-                line.toLowerCase().includes("amount") || line.toLowerCase().includes("charge") ||
-                line.toLowerCase().includes("salary") || /^\d+[\d,.]*/.test(cells[cells.length - 1]) ||
-                cells[cells.length - 1].toLowerCase().includes("tk")
-            );
-
-            if (isTableLine) { tableRows.push(cells); } 
-            else if (metadataRegex.test(line) || line.includes(":")) { infoBlocks.push(line); } 
-            else {
-                if (line.toLowerCase().includes("bill") || line.toUpperCase() === "BILL") {
-                    htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; text-transform:uppercase; font-size:24px; font-weight:800; border:none; padding:0;">${line}</h2>`;
-                } else if(line.toLowerCase().includes("engineering") || line.toLowerCase().includes("maintenance") || line.toLowerCase().includes("office") || line.toLowerCase().includes("food") || line.toLowerCase().includes("bakery")) {
-                    htmlOutput += `<h1 style="text-align:center; color:#1e3a8a; margin:5px 0; font-size:26px; text-transform:uppercase; font-weight:bold;">${line}</h1>`;
+            let cleanLine = line.replace(/["']/g, '').trim();
+            if (cleanLine.toLowerCase().includes("salary") || cleanLine.toLowerCase().includes("convience") || cleanLine.toLowerCase().includes("mobile") || /^\d+/.test(cleanLine)) {
+                const segments = cleanLine.split(/[,-|│]/).map(s => s.trim()).filter(s => s.length > 0);
+                if(segments.length > 0) itemsArray.push(segments);
+            } else if (cleanLine.toLowerCase().includes("total") && /\d+/.test(cleanLine)) {
+                grandTotalLine = cleanLine;
+            } else if (cleanLine.includes(":") || cleanLine.toLowerCase().includes("address") || cleanLine.toLowerCase().includes("to")) {
+                infoBlocks.push(cleanLine);
+            } else {
+                if (cleanLine.toUpperCase() === "BILL" || cleanLine.toLowerCase().includes("invoice")) {
+                    htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; text-transform:uppercase; font-size:24px; font-weight:800; border:none; padding:0;">${cleanLine}</h2>`;
+                } else if(cleanLine.toLowerCase().includes("engineering") || cleanLine.toLowerCase().includes("maintenance") || cleanLine.toLowerCase().includes("glass") || cleanLine.toLowerCase().includes("hardware")) {
+                    htmlOutput += `<h1 style="text-align:center; color:#1e3a8a; margin:5px 0; font-size:24px; text-transform:uppercase; font-weight:bold;">${cleanLine}</h1>`;
                 } else {
-                    htmlOutput += `<p style="margin: 6px 0; text-align: left; font-size:14px; color:#1f2937;">${line}</p>`;
+                    htmlOutput += `<p style="margin: 6px 0; text-align: left; font-size:14px; color:#1f2937;">${cleanLine}</p>`;
                 }
             }
         });
 
         if (infoBlocks.length > 0) {
-            htmlOutput += `<div style="margin: 20px 0; padding: 15px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size:14px; line-height:1.6;">`;
+            htmlOutput += `<div style="margin: 20px 0; padding: 15px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr; gap: 8px; font-size:14px; line-height:1.6;">`;
             infoBlocks.forEach(item => {
-                const parts = item.split(":");
-                if(parts.length >= 2) htmlOutput += `<div><strong>${parts[0].trim()}:</strong> ${parts.slice(1).join(":").trim()}</div>`;
+                const colonIdx = item.indexOf(":");
+                if(colonIdx !== -1) htmlOutput += `<div><strong>${item.substring(0, colonIdx).trim()}:</strong> ${item.substring(colonIdx + 1).trim()}</div>`;
                 else htmlOutput += `<div>${item}</div>`;
             });
             htmlOutput += `</div>`;
         }
 
-        if (tableRows.length > 0) {
-            htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center;">`;
-            tableRows.forEach((row) => {
-                const isHeader = row.some(cell => cell.toLowerCase().includes("sl") || cell.toLowerCase().includes("name") || cell.toLowerCase().includes("amount") || cell.toLowerCase().includes("tax") || cell.toLowerCase().includes("charge"));
-                const isTotal = row.some(cell => cell.toLowerCase().includes("total"));
+        htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center;">`;
+        htmlOutput += `<tr style="background-color: #106ebe; color: #ffffff; font-weight: bold; text-transform: uppercase;">
+            <th style="padding: 12px 8px; border: 1px solid #4b5563; width:60%;">DESCRIPTION / NAME</th>
+            <th style="padding: 12px 8px; border: 1px solid #4b5563; width:40%;">AMOUNT</th>
+        </tr>`;
 
-                if (isHeader) {
-                    htmlOutput += `<tr style="background-color: #106ebe; color: #ffffff; font-weight: bold; text-transform: uppercase;">`;
-                    row.forEach(cell => { htmlOutput += `<th style="padding: 12px 8px; border: 1px solid #4b5563; font-size:13px;">${cell}</th>`; });
-                    htmlOutput += `</tr>`;
-                } else if (isTotal) {
-                    htmlOutput += `<tr style="font-weight: bold; background-color: #f0f4ff; color: #1e3a8a;">`;
-                    if (row.length === 2) {
-                        htmlOutput += `<td colspan="2" style="padding: 12px 8px; border: 1px solid #4b5563; text-align: right; padding-right: 25px;">${row[0]}</td>`;
-                        htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; font-size:15px; font-weight:bold;">${row[1]}</td>`;
-                    } else {
-                        row.forEach((cell, idx) => { htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; ${idx === row.length-1 ? 'font-size:15px; font-weight:bold;' : ''}">${cell}</td>`; });
-                    }
-                    htmlOutput += `</tr>`;
-                } else {
-                    htmlOutput += `<tr>`;
-                    row.forEach(cell => { htmlOutput += `<td style="padding: 11px 8px; border: 1px solid #cbd5e1; color:#1f2937;">${cell}</td>`; });
-                    htmlOutput += `</tr>`;
-                }
+        if (itemsArray.length > 0) {
+            itemsArray.forEach(item => {
+                htmlOutput += `<tr>`;
+                if(item.length >= 2) {
+                    htmlOutput += `<td style="padding: 11px 8px; border: 1px solid #cbd5e1; text-align:left;">${item[0]}</td>`;
+                    htmlOutput += `<td style="padding: 11px 8px; border: 1px solid #cbd5e1; font-weight:600;">${item[1]}</td>`;
+                } else { htmlOutput += `<td style="padding: 11px 8px; border: 1px solid #cbd5e1; text-align:left;" colspan="2">${item[0]}</td>`; }
+                htmlOutput += `</tr>`;
             });
-            htmlOutput += `</table>`;
         }
+
+        if (grandTotalLine) {
+            const totalParts = grandTotalLine.split(/[,\t-]|total/i).map(t => t.trim()).filter(t => t.length > 0);
+            htmlOutput += `<tr style="font-weight: bold; background-color: #f0f4ff; color: #1e3a8a;">`;
+            htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; text-align: right; padding-right: 25px;">TOTAL</td>`;
+            htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; font-size:15px; font-weight:bold;">${totalParts[totalParts.length - 1] || grandTotalLine}</td>`;
+            htmlOutput += `</tr>`;
+        }
+        htmlOutput += `</table>`;
         return htmlOutput;
     }
 
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files; if(!files.length) { alert('Upload files first.'); return; }
         status.className = "status-loading"; status.textContent = "⚙️ Processing layouts and applying OCR engines...";
-        let successCount = 0;
 
         for(let i=0; i<files.length; i++) {
             const file = files[i]; const fileExt = file.name.split('.').pop().toLowerCase();
@@ -592,6 +639,7 @@
 
             try {
                 if(targetFormat === 'docx') {
+                    showDownloadToast("AI OCR Processing...", file.name);
                     let extractedText = "";
                     if(fileExt === 'pdf') {
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
@@ -608,7 +656,6 @@
                     const lines = extractedText.split('\n').filter(l => l.trim() !== '');
                     const docParagraphs = lines.map(l => new docx.Paragraph({ children: [new docx.TextRun({ text: l, font: "Segoe UI", size: 24 })], spacing: { after: 120 } }));
                     triggerDownload(await docx.Packer.toBlob(new docx.Document({ sections: [{ children: docParagraphs }] })), `${baseName}_converted.docx`);
-                    successCount++;
                 } else {
                     if(fileExt === 'pdf') {
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
@@ -618,7 +665,6 @@
                             await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
                             triggerDownload(cv.toDataURL(`image/${targetFormat || 'jpeg'}`, quality), `${baseName}_page_${p}.${targetFormat || 'jpeg'}`);
                         }
-                        successCount++;
                     } else if(fileExt === 'docx' || fileExt === 'doc') {
                         const resHtml = await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) });
                         if(targetFormat === 'pdf' || targetFormat === '') {
@@ -631,7 +677,6 @@
                             resHtml.value.replace(/<[^>]*>/g, '\n').split('\n').filter(l => l.trim() !== '').forEach((l, idx) => ctx.fillText(l, 40, 50 + (idx * 25)));
                             triggerDownload(cv.toDataURL(`image/${targetFormat}`, quality), `${baseName}_converted.${targetFormat}`);
                         }
-                        successCount++;
                     } else {
                         const img = await loadImage(file); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
                         cv.getContext('2d').drawImage(img, 0, 0);
@@ -640,12 +685,11 @@
                             pdf.addImage(cv.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height);
                             triggerDownload(pdf.output('blob'), `${baseName}_processed.pdf`);
                         } else { triggerDownload(cv.toDataURL(`image/${targetFormat || fileExt}`, quality), `${baseName}_processed.${targetFormat || fileExt}`); }
-                        successCount++;
                     }
                 }
             } catch(e) { console.error(e); }
         }
-        status.className = "status-success"; status.textContent = `✅ Successfully completed [Process & Download Batch] for ${successCount} items!`;
+        status.className = "status-success"; status.textContent = "✅ Operation Completed!";
     });
 
     // ==========================================
@@ -746,7 +790,7 @@
     async function launchWordTabWindow() {
         const file = officeFileInput.files[0]; if(!file) return;
         loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        officeStatus.className = "status-loading"; officeStatus.textContent = "🔄 De-serializing OpenXML document schemas...";
+        officeStatus.className = "status-loading"; officeStatus.textContent = "🔄 De-serializing OpenXML layout chains...";
 
         try {
             const buffer = await readFileAsBuffer(file);
@@ -794,7 +838,7 @@
     document.getElementById('btnDelCol').addEventListener('click', () => modifyTable('deleteCol'));
 
     // ==========================================
-    // INTERACTIVE EXPORT DIALOG POPUP ENGINE
+    // FIXED EXPORT PIPELINES
     // ==========================================
     const modalExportBtn = document.getElementById('modalExportBtn');
     const dialogCancelBtn = document.getElementById('dialogCancelBtn');
@@ -804,11 +848,14 @@
     modalExportBtn.addEventListener('click', () => dialogModal.style.display = "flex");
     dialogCancelBtn.addEventListener('click', () => dialogModal.style.display = "none");
 
-    // Option 1: Render Canvas Vectors directly to Mobile Storage PDF Blob
+    // Option 1: Native Mobile PDF Generation Matrix
     dialogPdfBtn.addEventListener('click', () => {
         dialogModal.style.display = "none";
         modalStatusMsg.className = "status-loading";
-        modalStatusMsg.textContent = "📄 Flattening rich canvas layers directly to mobile storage PDF files...";
+        modalStatusMsg.textContent = "📄 Compiling A4 layout structures...";
+
+        // Explicitly announce layout compilation progress triggers
+        showDownloadToast("Exporting Document...", `${loadedDocBaseName}.pdf`);
 
         setTimeout(() => {
             try {
@@ -816,28 +863,30 @@
                 const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
                 
                 doc.html(editorCoreSheet, {
-                    x: 20, y: 20, width: 550, windowWidth: 816,
+                    x: 30, y: 30, width: 530, windowWidth: 816,
                     callback: function(pdfInstance) {
                         const pdfBlobOutput = pdfInstance.output('blob');
-                        triggerDownload(pdfBlobOutput, `${loadedDocBaseName}_Edited_Blueprint.pdf`);
+                        triggerDownload(pdfBlobOutput, `${loadedDocBaseName}_Edited.pdf`);
                         modalStatusMsg.className = "status-success";
-                        modalStatusMsg.textContent = "✅ Export to PDF completed successfully!";
+                        modalStatusMsg.textContent = "✅ Export completed successfully!";
                     }
                 });
             } catch (err) {
-                modalStatusMsg.className = "status-error"; modalStatusMsg.textContent = "PDF compile crashed.";
+                modalStatusMsg.className = "status-error"; modalStatusMsg.textContent = "Export broken.";
+                hideDownloadToast();
             }
-        }, 100);
+        }, 150);
     });
 
-    // Option 2: Repack current workspace sub-nodes back to clean Microsoft Word (.docx)
+    // Option 2: Repack current clean workspace layout blocks to native Word (.docx)
     dialogDocxBtn.addEventListener('click', async () => {
         dialogModal.style.display = "none";
         modalStatusMsg.className = "status-loading";
         modalStatusMsg.textContent = "💾 Repacking matrix blocks to clean MS Word document blocks...";
+        
+        showDownloadToast("Exporting Document...", `${loadedDocBaseName}.docx`);
 
         try {
-            // Strip out tabular rows and translate them back to docx Paragraph nodes
             const rows = editorCoreSheet.querySelectorAll('tr');
             let docParagraphs = [];
 
@@ -863,9 +912,10 @@
             
             triggerDownload(docxBlob, `${loadedDocBaseName}_Edited_Document.docx`);
             modalStatusMsg.className = "status-success";
-            modalStatusMsg.textContent = "✅ Export as Word (.docx) completed successfully!";
+            modalStatusMsg.textContent = "✅ Export completed successfully!";
         } catch (err) {
             modalStatusMsg.className = "status-error"; modalStatusMsg.textContent = "Word compiler package crashed.";
+            hideDownloadToast();
         }
     });
 </script>
