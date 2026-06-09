@@ -6,6 +6,8 @@
     <title>Universal Converter & Compressor - Yeasin Alam</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
     <style>
         :root {
             --primary: #4f46e5;
@@ -200,19 +202,6 @@
         .status-success { color: var(--success); }
         .status-error { color: #dc2626; }
 
-        /* Hidden processing canvas container */
-        #hiddenSandbox {
-            position: absolute;
-            left: -9999px;
-            top: -9999px;
-            width: 500px;
-            font-size: 14px;
-            line-height: 1.6;
-            padding: 40px;
-            background: white;
-            color: black;
-        }
-
         /* Contact Footer Styles */
         .footer-banner {
             text-align: center;
@@ -247,8 +236,8 @@
     <h2>Convert & Compress</h2>
     
     <div class="drop-zone" id="dropZone">
-        <p>Drag & drop images or doc files here or <strong>browse</strong></p>
-        <input type="file" id="fileInput" style="display: none;" accept="image/*,.doc,.docx" multiple>
+        <p>Drag & drop any image, doc, or PDF here or <strong>browse</strong></p>
+        <input type="file" id="fileInput" style="display: none;" accept="image/*,.doc,.docx,.pdf" multiple>
         <span id="fileName"></span>
     </div>
 
@@ -260,6 +249,7 @@
             <option value="png">Convert to PNG (Image)</option>
             <option value="webp">Convert to WebP (Optimized Image)</option>
             <option value="pdf">Convert to PDF (Document)</option>
+            <option value="docx">Convert to Word DOCX (MS Office Document)</option>
         </select>
     </div>
 
@@ -282,13 +272,14 @@
     <div id="status"></div>
 </div>
 
-<div id="hiddenSandbox"></div>
-
 <div class="footer-banner">
     Contact Support: <a href="mailto:yeasinalam890@gmail.com">yeasinalam890@gmail.com</a>
 </div>
 
 <script>
+    // Initialize PDFJS Worker config mapping
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
@@ -299,7 +290,6 @@
     const qualityRange = document.getElementById('qualityRange');
     const qualityVal = document.getElementById('qualityVal');
     const status = document.getElementById('status');
-    const sandbox = document.getElementById('hiddenSandbox');
 
     // UI Interactive Triggers
     dropZone.addEventListener('click', () => fileInput.click());
@@ -342,7 +332,6 @@
         qualityVal.textContent = qualityRange.value + '%';
     });
 
-    // Promise Wrapper to parse standard image streams
     function loadImage(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -357,8 +346,7 @@
         });
     }
 
-    // Promise Wrapper to read Doc files via ArrayBuffers
-    function readDocFile(file) {
+    function readFileAsBuffer(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsArrayBuffer(file);
@@ -367,11 +355,16 @@
         });
     }
 
-    // Core Batch Processor
+    // Helper to generate docx image blocks cleanly via Blob formats
+    function getBlobFromCanvas(canvas, mime, quality) {
+        return new Promise(resolve => canvas.toBlob(resolve, mime, quality));
+    }
+
+    // Main Processing Engine
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files;
         if (!files.length) {
-            alert('Please drop or browse files first.');
+            alert('Please select files first.');
             return;
         }
 
@@ -388,87 +381,157 @@
             status.textContent = `Processing file ${i + 1} of ${files.length}...\n(${file.name})`;
 
             try {
-                // BRANCH A: Handling Word Document Files (.doc or .docx)
-                if (fileExt === 'docx' || fileExt === 'doc') {
-                    const arrayBuffer = await readDocFile(file);
-                    
-                    // Convert raw Docx structure to pure HTML text tags
-                    const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-                    const htmlContent = result.value; 
+                // ==========================================
+                // BRANCH 1: TARGETING WORD DOCX AS OUTPUT
+                // ==========================================
+                if (targetFormat === 'docx') {
+                    let imageBlobsArray = [];
 
-                    // Default Word layouts to PDF outputs dynamically
-                    const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                    // Case A: Input is a PDF file
+                    if (fileExt === 'pdf') {
+                        const arrayBuffer = await readFileAsBuffer(file);
+                        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
+                        const pdf = await loadingTask.promise;
 
-                    // Render output directly onto PDF document lines
-                    await pdf.html(htmlContent, {
-                        callback: function (doc) {
-                            doc.save(`${baseName}_converted_${Date.now()}.pdf`);
-                        },
-                        x: 40,
-                        y: 40,
-                        width: 515, // Standard margins matching a4 parameters
-                        windowWidth: 650
-                    });
-                    successCount++;
-                } 
-                // BRANCH B: Handling Image File Configurations
-                else {
-                    const img = await loadImage(file);
+                        for (let p = 1; p <= pdf.numPages; p++) {
+                            const page = await pdf.getPage(p);
+                            const viewport = page.getViewport({ scale: 1.5 });
+                            const canvas = document.createElement('canvas');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            await page.render({ canvasContext: ctx = canvas.getContext('2d'), viewport }).promise;
+                            
+                            const blob = await getBlobFromCanvas(canvas, 'image/jpeg', quality);
+                            imageBlobsArray.push({ blob, w: canvas.width, h: canvas.height });
+                        }
+                    } 
+                    // Case B: Input is a Word Doc file already
+                    else if (fileExt === 'docx' || fileExt === 'doc') {
+                        // Omit or direct download original
+                        const arrayBuffer = await readFileAsBuffer(file);
+                        const blob = new Blob([arrayBuffer], { type: file.type });
+                        imageBlobsArray = null; 
+                        triggerDownload(URL.createObjectURL(blob), `${baseName}_copy.${fileExt}`);
+                    } 
+                    // Case C: Input is standard Image structure
+                    else {
+                        const img = await loadImage(file);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width; canvas.height = img.height;
+                        canvas.getContext('2d').drawImage(img, 0, 0);
+                        const blob = await getBlobFromCanvas(canvas, 'image/jpeg', quality);
+                        imageBlobsArray.push({ blob, w: img.width, h: img.height });
+                    }
 
-                    if (targetFormat === 'pdf') {
-                        const { jsPDF } = window.jspdf;
-                        const orientation = img.width > img.height ? 'l' : 'p';
-                        const pdf = new jsPDF({
-                            orientation: orientation,
-                            unit: 'px',
-                            format: [img.width, img.height]
+                    // Pack resolved image layout targets into docx paragraphs elements
+                    if (imageBlobsArray && imageBlobsArray.length) {
+                        const childrenElements = imageBlobsArray.map(imgData => {
+                            // Scale down dimensions to fit nicely within standard Word page widths (approx 550 max)
+                            const scaleFactor = imgData.w > 550 ? (550 / imgData.w) : 1;
+                            return new docx.Paragraph({
+                                children: [
+                                    new docx.ImageRun({
+                                        data: imgData.blob,
+                                        transformation: { width: imgData.w * scaleFactor, height: imgData.h * scaleFactor }
+                                    })
+                                ]
+                            });
                         });
 
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
-                        
-                        const optimizedImgData = canvas.toDataURL('image/jpeg', quality);
-                        pdf.addImage(optimizedImgData, 'JPEG', 0, 0, img.width, img.height);
-                        pdf.save(`${baseName}_processed_${Date.now()}.pdf`);
-                    } else {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0);
-
-                        let mimeType = targetFormat ? `image/${targetFormat}` : file.type;
-                        let downloadExt = targetFormat || fileExt;
-
-                        const finalDataUrl = canvas.toDataURL(mimeType, quality);
-                        
-                        const a = document.createElement('a');
-                        a.href = finalDataUrl;
-                        a.download = `${baseName}_processed_${Date.now()}.${downloadExt}`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
+                        const doc = new docx.Document({ sections: [{ children: childrenElements }] });
+                        const docBlob = await docx.Packer.toBlob(doc);
+                        triggerDownload(URL.createObjectURL(docBlob), `${baseName}_converted_${Date.now()}.docx`);
                     }
                     successCount++;
                 }
+                // ==========================================
+                // BRANCH 2: TARGETING IMAGES OR PDF AS OUTPUT
+                // ==========================================
+                else {
+                    // Case A: Input is PDF file structure
+                    if (fileExt === 'pdf') {
+                        const arrayBuffer = await readFileAsBuffer(file);
+                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+
+                        for (let p = 1; p <= pdf.numPages; p++) {
+                            const page = await pdf.getPage(p);
+                            const viewport = page.getViewport({ scale: 2.0 });
+                            const canvas = document.createElement('canvas');
+                            canvas.height = viewport.height; canvas.width = viewport.width;
+                            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                            
+                            const outFormat = targetFormat || 'jpeg';
+                            triggerDownload(canvas.toDataURL(`image/${outFormat}`, quality), `${baseName}_page_${p}_${Date.now()}.${outFormat}`);
+                        }
+                        successCount++;
+                    }
+                    // Case B: Input is Word Document Structure
+                    else if (fileExt === 'docx' || fileExt === 'doc') {
+                        const arrayBuffer = await readFileAsBuffer(file);
+                        const result = await mammoth.convertToHtml({ arrayBuffer });
+                        
+                        if (targetFormat === 'pdf' || targetFormat === '') {
+                            const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                            await pdf.html(result.value, { x: 40, y: 40, width: 515, windowWidth: 650 });
+                            pdf.save(`${baseName}_converted_${Date.now()}.pdf`);
+                        } else {
+                            // Render parsed document text onto canvas to output an image format option
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 800; canvas.height = 1000;
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000);
+                            ctx.fillStyle = "black"; ctx.font = "16px Arial";
+                            
+                            // Strip tags and split into lines for simple fallback image printing
+                            const cleanText = result.value.replace(/<[^>]*>/g, '\n');
+                            const lines = cleanText.split('\n').filter(l => l.trim() !== '');
+                            lines.forEach((line, index) => { ctx.fillText(line, 40, 50 + (index * 25)); });
+
+                            triggerDownload(canvas.toDataURL(`image/${targetFormat}`, quality), `${baseName}_converted_${Date.now()}.${targetFormat}`);
+                        }
+                        successCount++;
+                    }
+                    // Case C: Input is image file structure
+                    else {
+                        const img = await loadImage(file);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width; canvas.height = img.height;
+                        canvas.getContext('2d').drawImage(img, 0, 0);
+
+                        if (targetFormat === 'pdf') {
+                            const pdf = new jspdf.jsPDF({ orientation: img.width > img.height ? 'l' : 'p', unit: 'px', format: [img.width, img.height] });
+                            pdf.addImage(canvas.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height);
+                            pdf.save(`${baseName}_processed_${Date.now()}.pdf`);
+                        } else {
+                            let mime = targetFormat ? `image/${targetFormat}` : file.type;
+                            let ext = targetFormat || fileExt;
+                            triggerDownload(canvas.toDataURL(mime, quality), `${baseName}_processed_${Date.now()}.${ext}`);
+                        }
+                        successCount++;
+                    }
+                }
             } catch (err) {
-                console.error(`Error working file block target index ${i}:`, err);
+                console.error(`Error processing asset index array references ${i}:`, err);
             }
         }
 
-        // Summary evaluation feedback
         if (successCount === files.length) {
             status.className = "status-success";
             status.textContent = `Success! Processed and downloaded ${successCount} files safely.`;
         } else {
             status.className = "status-error";
-            status.textContent = `Processed ${successCount} out of ${files.length} successfully. Mismatched structures omitted.`;
+            status.textContent = `Completed processing chain with dropped files. check log console records.`;
         }
     });
+
+    function triggerDownload(url, filename) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
 </script>
 </body>
 </html>
