@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Converter & Compressor - Yeasin Alam</title>
+    <title>Universal Converter, Compressor & PDF Editor - Yeasin Alam</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <style>
         :root {
             --primary: #4f46e5;
             --primary-hover: #4338ca;
             --success: #10b981;
+            --danger: #ef4444;
             --bg: #f3f4f6;
             --card: #ffffff;
             --text: #1f2937;
@@ -24,7 +26,6 @@
             color: var(--text);
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             align-items: center;
             min-height: 100vh;
             margin: 0;
@@ -32,7 +33,6 @@
             box-sizing: border-box;
         }
 
-        /* Top Banner Styles */
         .header-banner {
             text-align: center;
             margin-top: 10px;
@@ -44,35 +44,39 @@
             font-size: 36px;
             color: var(--primary);
             font-weight: 800;
-            letter-spacing: -0.5px;
         }
 
         .header-banner p {
             margin: 5px 0 0 0;
             font-size: 18px;
             color: #4b5563;
-            font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        /* Main App Container */
-        .converter-container {
+        .app-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .converter-container, .editor-container {
             background: var(--card);
             padding: 35px;
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 450px;
             box-sizing: border-box;
-            margin-bottom: auto;
         }
 
         h2 {
             margin-top: 0;
             font-size: 24px;
-            text-align: center;
             color: #111827;
+            border-bottom: 2px solid #f3f4f6;
+            padding-bottom: 10px;
         }
 
         .drop-zone {
@@ -90,12 +94,7 @@
             background: #eef2ff;
         }
 
-        .drop-zone p {
-            margin: 0 0 10px 0;
-            color: #64748b;
-        }
-
-        #fileName {
+        #fileName, #editorFileName {
             display: block;
             word-break: break-all;
             color: var(--primary);
@@ -104,8 +103,6 @@
             max-height: 120px;
             overflow-y: auto;
             font-size: 13px;
-            text-align: left;
-            padding: 0 10px;
         }
 
         label {
@@ -131,11 +128,6 @@
             outline: none;
         }
 
-        select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-
         .option-group {
             background: #f9fafb;
             border: 1px solid #e5e7eb;
@@ -149,32 +141,11 @@
             align-items: center;
             gap: 8px;
             cursor: pointer;
-            font-size: 15px;
-        }
-
-        .checkbox-container input {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
         }
 
         .slider-panel {
             margin-top: 12px;
             display: none;
-        }
-
-        .slider-label-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            color: #6b7280;
-            margin-bottom: 4px;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            margin: 0;
-            cursor: pointer;
         }
 
         button {
@@ -186,11 +157,47 @@
             transition: background 0.2s;
         }
 
-        button:hover {
-            background-color: var(--primary-hover);
+        button:hover { background-color: var(--primary-hover); }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
         }
 
-        #status {
+        .toolbar button {
+            width: auto;
+            flex: 1;
+            min-width: 100px;
+            font-size: 14px;
+            padding: 8px 12px;
+        }
+
+        .btn-success { background-color: var(--success); }
+        .btn-danger { background-color: var(--danger); }
+
+        .workspace-frame {
+            width: 100%;
+            overflow: auto;
+            background: #374151;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            max-height: 600px;
+        }
+
+        .canvas-wrapper {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            background: white;
+        }
+
+        #status, #editorStatus {
             margin-top: 15px;
             text-align: center;
             font-size: 14px;
@@ -202,10 +209,9 @@
         .status-success { color: var(--success); }
         .status-error { color: #dc2626; }
 
-        /* Contact Footer Styles */
         .footer-banner {
             text-align: center;
-            margin-top: 30px;
+            margin-top: 40px;
             padding-top: 15px;
             border-top: 1px solid #e5e7eb;
             width: 100%;
@@ -214,62 +220,78 @@
             color: #6b7280;
         }
 
-        .footer-banner a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .footer-banner a:hover {
-            text-decoration: underline;
-        }
+        .footer-banner a { color: var(--primary); text-decoration: none; font-weight: 600; }
     </style>
 </head>
 <body>
 
 <div class="header-banner">
     <h1>Yeasin Alam</h1>
-    <p>File Converter</p>
+    <p>File Master Pro</p>
 </div>
 
-<div class="converter-container">
-    <h2>Convert & Compress</h2>
-    
-    <div class="drop-zone" id="dropZone">
-        <p>Drag & drop any image, doc, or PDF here or <strong>browse</strong></p>
-        <input type="file" id="fileInput" style="display: none;" accept="image/*,.doc,.docx,.pdf" multiple>
-        <span id="fileName"></span>
-    </div>
-
-    <div style="margin-top: 20px;">
-        <label for="formatSelect">Output Format Target</label>
-        <select id="formatSelect">
-            <option value="">Keep Original Format (Compression Only)</option>
-            <option value="jpeg">Convert to JPG (Image)</option>
-            <option value="png">Convert to PNG (Image)</option>
-            <option value="webp">Convert to WebP (Optimized Image)</option>
-            <option value="pdf">Convert to PDF (Document)</option>
-            <option value="docx">Convert to Word DOCX (MS Office Document)</option>
-        </select>
-    </div>
-
-    <div class="option-group">
-        <label class="checkbox-container">
-            <input type="checkbox" id="compressCheck">
-            <span>Enable Optimization / Compression</span>
-        </label>
-        
-        <div class="slider-panel" id="sliderPanel">
-            <div class="slider-label-row">
-                <span>Target Quality Level</span>
-                <span id="qualityVal">80%</span>
-            </div>
-            <input type="range" id="qualityRange" min="10" max="100" value="80">
+<div class="app-grid">
+    <div class="converter-container">
+        <h2>1. Batch Converter & Compressor</h2>
+        <div class="drop-zone" id="dropZone">
+            <p>Drag & drop any image, doc, or PDF here or <strong>browse</strong></p>
+            <input type="file" id="fileInput" style="display: none;" accept="image/*,.doc,.docx,.pdf" multiple>
+            <span id="fileName"></span>
         </div>
+
+        <div style="margin-top: 20px;">
+            <label for="formatSelect">Output Format Target</label>
+            <select id="formatSelect">
+                <option value="">Keep Original Format (Compression Only)</option>
+                <option value="jpeg">Convert to JPG (Image)</option>
+                <option value="png">Convert to PNG (Image)</option>
+                <option value="webp">Convert to WebP (Optimized Image)</option>
+                <option value="pdf">Convert to PDF (Document)</option>
+                <option value="docx">Convert to Word DOCX (MS Office Document)</option>
+            </select>
+        </div>
+
+        <div class="option-group">
+            <label class="checkbox-container">
+                <input type="checkbox" id="compressCheck">
+                <span>Enable Optimization / Compression</span>
+            </label>
+            <div class="slider-panel" id="sliderPanel">
+                <div class="slider-label-row">
+                    <span>Target Quality Level</span>
+                    <span id="qualityVal">80%</span>
+                </div>
+                <input type="range" id="qualityRange" min="10" max="100" value="80">
+            </div>
+        </div>
+
+        <button id="convertBtn">Process & Download Batch</button>
+        <div id="status"></div>
     </div>
 
-    <button id="convertBtn">Process & Download</button>
-    <div id="status"></div>
+    <div class="editor-container">
+        <h2>2. Visual PDF Document Editor</h2>
+        <div class="drop-zone" id="editorDropZone">
+            <p>Drag & drop a PDF file here to <strong>Modify & Edit</strong></p>
+            <input type="file" id="editorFileInput" style="display: none;" accept=".pdf">
+            <span id="editorFileName"></span>
+        </div>
+
+        <div id="editorWorkspace" style="display:none; margin-top:20px;">
+            <div class="toolbar">
+                <button id="addTextBtn">✏️ Add/Edit Text</button>
+                <button id="addWhiteoutBtn">⬜ Whiteout (Erase)</button>
+                <button id="deleteBtn" class="btn-danger">🗑️ Delete Object</button>
+                <button id="savePdfBtn" class="btn-success">💾 Export Edited PDF</button>
+            </div>
+            <div class="workspace-frame">
+                <div class="canvas-wrapper">
+                    <canvas id="pdfCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+        <div id="editorStatus"></div>
+    </div>
 </div>
 
 <div class="footer-banner">
@@ -277,9 +299,9 @@
 </div>
 
 <script>
-    // Initialize PDFJS Worker config mapping
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+    // UI elements mapping 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
@@ -291,46 +313,30 @@
     const qualityVal = document.getElementById('qualityVal');
     const status = document.getElementById('status');
 
-    // UI Interactive Triggers
+    // Editor tracking pointers
+    let fabricCanvas = null;
+    let originalPdfDimensions = { width: 0, height: 0 };
+    let pdfFileBaseName = "document";
+
+    // Trigger setups
     dropZone.addEventListener('click', () => fileInput.click());
-    
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
-
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
-        if(e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-            updateFileNameDisplay();
-        }
+        if(e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; updateFileNameDisplay(); }
     });
-
     fileInput.addEventListener('change', updateFileNameDisplay);
 
     function updateFileNameDisplay() {
         const totalFiles = fileInput.files.length;
-        if(totalFiles === 1) {
-            fileName.textContent = `📄 ${fileInput.files[0].name}`;
-        } else if (totalFiles > 1) {
-            fileName.innerHTML = `<strong>Selected ${totalFiles} files:</strong><br>` + 
-                Array.from(fileInput.files).map(f => `• ${f.name}`).join('<br>');
-        } else {
-            fileName.textContent = "";
-        }
+        if(totalFiles === 1) fileName.textContent = `📄 ${fileInput.files[0].name}`;
+        else if (totalFiles > 1) fileName.innerHTML = `<strong>Selected ${totalFiles} files:</strong><br>` + Array.from(fileInput.files).map(f => `• ${f.name}`).join('<br>');
     }
 
-    compressCheck.addEventListener('change', () => {
-        sliderPanel.style.display = compressCheck.checked ? 'block' : 'none';
-    });
-
-    qualityRange.addEventListener('input', () => {
-        qualityVal.textContent = qualityRange.value + '%';
-    });
+    compressCheck.addEventListener('change', () => { sliderPanel.style.display = compressCheck.checked ? 'block' : 'none'; });
+    qualityRange.addEventListener('input', () => { qualityVal.textContent = qualityRange.value + '%'; });
 
     function loadImage(file) {
         return new Promise((resolve, reject) => {
@@ -340,34 +346,24 @@
                 const img = new Image();
                 img.src = e.target.result;
                 img.onload = () => resolve(img);
-                img.onerror = (err) => reject(err);
             };
-            reader.onerror = (err) => reject(err);
         });
     }
 
     function readFileAsBuffer(file) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const reader = new FileReader();
             reader.readAsArrayBuffer(file);
             reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (err) => reject(err);
         });
     }
 
-    // Helper to generate docx image blocks cleanly via Blob formats
-    function getBlobFromCanvas(canvas, mime, quality) {
-        return new Promise(resolve => canvas.toBlob(resolve, mime, quality));
-    }
+    function getBlobFromCanvas(canvas, mime, quality) { return new Promise(resolve => canvas.toBlob(resolve, mime, quality)); }
 
-    // Main Processing Engine
+    // Conversion Runner Execution
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files;
-        if (!files.length) {
-            alert('Please select files first.');
-            return;
-        }
-
+        if (!files.length) { alert('Select files first.'); return; }
         status.className = "status-loading";
         let successCount = 0;
 
@@ -378,43 +374,25 @@
             const targetFormat = formatSelect.value;
             const quality = compressCheck.checked ? (qualityRange.value / 100) : 0.92;
 
-            status.textContent = `Processing file ${i + 1} of ${files.length}...\n(${file.name})`;
-
             try {
-                // ==========================================
-                // BRANCH 1: TARGETING WORD DOCX AS OUTPUT
-                // ==========================================
                 if (targetFormat === 'docx') {
                     let imageBlobsArray = [];
-
-                    // Case A: Input is a PDF file
                     if (fileExt === 'pdf') {
                         const arrayBuffer = await readFileAsBuffer(file);
-                        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
-                        const pdf = await loadingTask.promise;
-
+                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
                         for (let p = 1; p <= pdf.numPages; p++) {
                             const page = await pdf.getPage(p);
                             const viewport = page.getViewport({ scale: 1.5 });
                             const canvas = document.createElement('canvas');
-                            canvas.height = viewport.height;
-                            canvas.width = viewport.width;
-                            await page.render({ canvasContext: ctx = canvas.getContext('2d'), viewport }).promise;
-                            
+                            canvas.height = viewport.height; canvas.width = viewport.width;
+                            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
                             const blob = await getBlobFromCanvas(canvas, 'image/jpeg', quality);
                             imageBlobsArray.push({ blob, w: canvas.width, h: canvas.height });
                         }
-                    } 
-                    // Case B: Input is a Word Doc file already
-                    else if (fileExt === 'docx' || fileExt === 'doc') {
-                        // Omit or direct download original
+                    } else if (fileExt === 'docx' || fileExt === 'doc') {
                         const arrayBuffer = await readFileAsBuffer(file);
-                        const blob = new Blob([arrayBuffer], { type: file.type });
-                        imageBlobsArray = null; 
-                        triggerDownload(URL.createObjectURL(blob), `${baseName}_copy.${fileExt}`);
-                    } 
-                    // Case C: Input is standard Image structure
-                    else {
+                        triggerDownload(URL.createObjectURL(new Blob([arrayBuffer])), `${baseName}_copy.${fileExt}`);
+                    } else {
                         const img = await loadImage(file);
                         const canvas = document.createElement('canvas');
                         canvas.width = img.width; canvas.height = img.height;
@@ -423,115 +401,216 @@
                         imageBlobsArray.push({ blob, w: img.width, h: img.height });
                     }
 
-                    // Pack resolved image layout targets into docx paragraphs elements
                     if (imageBlobsArray && imageBlobsArray.length) {
                         const childrenElements = imageBlobsArray.map(imgData => {
-                            // Scale down dimensions to fit nicely within standard Word page widths (approx 550 max)
                             const scaleFactor = imgData.w > 550 ? (550 / imgData.w) : 1;
                             return new docx.Paragraph({
-                                children: [
-                                    new docx.ImageRun({
-                                        data: imgData.blob,
-                                        transformation: { width: imgData.w * scaleFactor, height: imgData.h * scaleFactor }
-                                    })
-                                ]
+                                children: [new docx.ImageRun({ data: imgData.blob, transformation: { width: imgData.w * scaleFactor, height: imgData.h * scaleFactor } })]
                             });
                         });
-
                         const doc = new docx.Document({ sections: [{ children: childrenElements }] });
                         const docBlob = await docx.Packer.toBlob(doc);
-                        triggerDownload(URL.createObjectURL(docBlob), `${baseName}_converted_${Date.now()}.docx`);
+                        triggerDownload(URL.createObjectURL(docBlob), `${baseName}_converted.docx`);
                     }
                     successCount++;
-                }
-                // ==========================================
-                // BRANCH 2: TARGETING IMAGES OR PDF AS OUTPUT
-                // ==========================================
-                else {
-                    // Case A: Input is PDF file structure
+                } else {
                     if (fileExt === 'pdf') {
                         const arrayBuffer = await readFileAsBuffer(file);
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-
                         for (let p = 1; p <= pdf.numPages; p++) {
                             const page = await pdf.getPage(p);
                             const viewport = page.getViewport({ scale: 2.0 });
                             const canvas = document.createElement('canvas');
                             canvas.height = viewport.height; canvas.width = viewport.width;
                             await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                            
                             const outFormat = targetFormat || 'jpeg';
-                            triggerDownload(canvas.toDataURL(`image/${outFormat}`, quality), `${baseName}_page_${p}_${Date.now()}.${outFormat}`);
+                            triggerDownload(canvas.toDataURL(`image/${outFormat}`, quality), `${baseName}_page_${p}.${outFormat}`);
                         }
                         successCount++;
-                    }
-                    // Case B: Input is Word Document Structure
-                    else if (fileExt === 'docx' || fileExt === 'doc') {
+                    } else if (fileExt === 'docx' || fileExt === 'doc') {
                         const arrayBuffer = await readFileAsBuffer(file);
                         const result = await mammoth.convertToHtml({ arrayBuffer });
-                        
                         if (targetFormat === 'pdf' || targetFormat === '') {
                             const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
                             await pdf.html(result.value, { x: 40, y: 40, width: 515, windowWidth: 650 });
-                            pdf.save(`${baseName}_converted_${Date.now()}.pdf`);
+                            pdf.save(`${baseName}_converted.pdf`);
                         } else {
-                            // Render parsed document text onto canvas to output an image format option
-                            const canvas = document.createElement('canvas');
-                            canvas.width = 800; canvas.height = 1000;
-                            const ctx = canvas.getContext('2d');
-                            ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000);
+                            const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = 1000;
+                            const ctx = canvas.getContext('2d'); ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000);
                             ctx.fillStyle = "black"; ctx.font = "16px Arial";
-                            
-                            // Strip tags and split into lines for simple fallback image printing
-                            const cleanText = result.value.replace(/<[^>]*>/g, '\n');
-                            const lines = cleanText.split('\n').filter(l => l.trim() !== '');
+                            const lines = result.value.replace(/<[^>]*>/g, '\n').split('\n').filter(l => l.trim() !== '');
                             lines.forEach((line, index) => { ctx.fillText(line, 40, 50 + (index * 25)); });
-
-                            triggerDownload(canvas.toDataURL(`image/${targetFormat}`, quality), `${baseName}_converted_${Date.now()}.${targetFormat}`);
+                            triggerDownload(canvas.toDataURL(`image/${targetFormat}`, quality), `${baseName}_converted.${targetFormat}`);
                         }
                         successCount++;
-                    }
-                    // Case C: Input is image file structure
-                    else {
+                    } else {
                         const img = await loadImage(file);
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width; canvas.height = img.height;
+                        const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
                         canvas.getContext('2d').drawImage(img, 0, 0);
-
                         if (targetFormat === 'pdf') {
                             const pdf = new jspdf.jsPDF({ orientation: img.width > img.height ? 'l' : 'p', unit: 'px', format: [img.width, img.height] });
                             pdf.addImage(canvas.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height);
-                            pdf.save(`${baseName}_processed_${Date.now()}.pdf`);
+                            pdf.save(`${baseName}_processed.pdf`);
                         } else {
                             let mime = targetFormat ? `image/${targetFormat}` : file.type;
-                            let ext = targetFormat || fileExt;
-                            triggerDownload(canvas.toDataURL(mime, quality), `${baseName}_processed_${Date.now()}.${ext}`);
+                            triggerDownload(canvas.toDataURL(mime, quality), `${baseName}_processed.${targetFormat || fileExt}`);
                         }
                         successCount++;
                     }
                 }
-            } catch (err) {
-                console.error(`Error processing asset index array references ${i}:`, err);
-            }
+            } catch (err) { console.error(err); }
         }
-
-        if (successCount === files.length) {
-            status.className = "status-success";
-            status.textContent = `Success! Processed and downloaded ${successCount} files safely.`;
-        } else {
-            status.className = "status-error";
-            status.textContent = `Completed processing chain with dropped files. check log console records.`;
-        }
+        status.className = "status-success";
+        status.textContent = `Completed processing batch pipeline.`;
     });
 
     function triggerDownload(url, filename) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const a = document.createElement('a'); a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
     }
+
+    // ==========================================
+    // ADVANCED EDIT ENGINE CODE (SECTION 2 LOGIC)
+    // ==========================================
+    const editorDropZone = document.getElementById('editorDropZone');
+    const editorFileInput = document.getElementById('editorFileInput');
+    const editorFileName = document.getElementById('editorFileName');
+    const editorWorkspace = document.getElementById('editorWorkspace');
+    const editorStatus = document.getElementById('editorStatus');
+
+    editorDropZone.addEventListener('click', () => editorFileInput.click());
+    editorDropZone.addEventListener('dragover', (e) => { e.preventDefault(); editorDropZone.classList.add('drag-over'); });
+    editorDropZone.addEventListener('dragleave', () => editorDropZone.classList.remove('drag-over'));
+    editorDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        editorDropZone.classList.remove('drag-over');
+        if(e.dataTransfer.files.length) { editorFileInput.files = e.dataTransfer.files; initPdfEditor(); }
+    });
+    editorFileInput.addEventListener('change', initPdfEditor);
+
+    async function initPdfEditor() {
+        const file = editorFileInput.files[0];
+        if(!file) return;
+        
+        pdfFileBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        editorFileName.textContent = `Editing: ${file.name}`;
+        editorStatus.className = "status-loading";
+        editorStatus.textContent = "Importing layers into vector matrix. Please wait...";
+
+        try {
+            const arrayBuffer = await readFileAsBuffer(file);
+            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+            
+            // Edit Page 1 of document directly inside standard viewport
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1.5 });
+
+            originalPdfDimensions.width = viewport.width;
+            originalPdfDimensions.height = viewport.height;
+
+            // Render PDF onto hidden viewport target
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = viewport.width;
+            tempCanvas.height = viewport.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            await page.render({ canvasContext: tempCtx, viewport }).promise;
+
+            // Mount fabric canvas layer directly over background frame sheet
+            if(fabricCanvas) { fabricCanvas.dispose(); }
+            
+            const rawCanvasEl = document.getElementById('pdfCanvas');
+            rawCanvasEl.width = viewport.width;
+            rawCanvasEl.height = viewport.height;
+
+            fabricCanvas = new fabric.Canvas('pdfCanvas');
+
+            // Apply background vector print out image logic
+            fabric.Image.fromURL(tempCanvas.toDataURL(), function(img) {
+                fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas));
+            });
+
+            editorWorkspace.style.display = "block";
+            editorStatus.className = "status-success";
+            editorStatus.textContent = "PDF Loaded! Use the tools above to overlay edits or whiteout text blocks.";
+        } catch(e) {
+            editorStatus.className = "status-error";
+            editorStatus.textContent = "Failed to load PDF editor viewport layout.";
+            console.error(e);
+        }
+    }
+
+    // Toolbar Operations
+    document.getElementById('addTextBtn').addEventListener('click', () => {
+        if(!fabricCanvas) return;
+        const textObject = new fabric.IText('Double click to edit text', {
+            left: 50,
+            top: 50,
+            fontFamily: 'Segoe UI',
+            fontSize: 18,
+            fill: '#000000',
+            selectable: true
+        });
+        fabricCanvas.add(textObject);
+        fabricCanvas.setActiveObject(textObject);
+    });
+
+    document.getElementById('addWhiteoutBtn').addEventListener('click', () => {
+        if(!fabricCanvas) return;
+        // Creates a white block to cover underlying text seamlessly
+        const rect = new fabric.Rect({
+            left: 80,
+            top: 80,
+            fill: '#ffffff',
+            width: 150,
+            height: 30,
+            selectable: true,
+            stroke: '#cbd5e1',
+            strokeWidth: 1
+        });
+        fabricCanvas.add(rect);
+        fabricCanvas.setActiveObject(rect);
+    });
+
+    document.getElementById('deleteBtn').addEventListener('click', () => {
+        if(!fabricCanvas) return;
+        const active = fabricCanvas.getActiveObject();
+        if(active) {
+            fabricCanvas.remove(active);
+        }
+    });
+
+    document.getElementById('savePdfBtn').addEventListener('click', async () => {
+        if(!fabricCanvas) return;
+        
+        editorStatus.className = "status-loading";
+        editorStatus.textContent = "Exporting your modified vectors back into a new PDF blueprint...";
+
+        // De-select current bounding box views to avoid freezing the border frames inside final download print outputs
+        fabricCanvas.discardActiveObject().renderAll();
+
+        setTimeout(() => {
+            try {
+                const finalDataUrl = fabricCanvas.toDataURL({ format: 'jpeg', quality: 1.0 });
+                const { jsPDF } = window.jspdf;
+                
+                const pdf = new jsPDF({
+                    orientation: originalPdfDimensions.width > originalPdfDimensions.height ? 'l' : 'p',
+                    unit: 'px',
+                    format: [originalPdfDimensions.width, originalPdfDimensions.height]
+                });
+
+                pdf.addImage(finalDataUrl, 'JPEG', 0, 0, originalPdfDimensions.width, originalPdfDimensions.height);
+                pdf.save(`${pdfFileBaseName}_edited_${Date.now()}.pdf`);
+
+                editorStatus.className = "status-success";
+                editorStatus.textContent = "PDF Saved successfully!";
+            } catch(e) {
+                editorStatus.className = "status-error";
+                editorStatus.textContent = "Failed to export PDF binary formatting pipelines.";
+                console.error(e);
+            }
+        }, 300);
+    });
 </script>
 </body>
 </html>
