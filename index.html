@@ -8,8 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
     
     <style>
         :root {
@@ -172,14 +171,14 @@
 
         button:hover { background-color: var(--primary-hover); }
 
-        .office-toolbar-custom, .scanner-toolbar {
+        .scanner-toolbar {
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
             flex-wrap: wrap;
         }
 
-        .office-toolbar-custom button, .scanner-toolbar button {
+        .scanner-toolbar button {
             width: auto;
             padding: 10px 20px;
             font-size: 14px;
@@ -197,22 +196,16 @@
             text-align: center;
             max-height: 450px;
             overflow: auto;
+            position: relative;
         }
 
         .scanner-preview-frame canvas {
             max-width: 100%;
             background: white;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-
-        .editor-paper-frame {
-            background: #6b7280;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
-            box-sizing: border-box;
-            width: 100%;
-            overflow-x: auto;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         #status, #scannerStatus, #officeStatus {
@@ -250,7 +243,7 @@
 
 <div class="app-grid">
     <div class="converter-container">
-        <h2>1. Batch Converter & Compressor</h2>
+        <h2>1. Batch Converter & Compressor (AI Scan Feature Included)</h2>
         <div class="drop-zone" id="dropZone">
             <p>Drag & drop any image, doc, or PDF here or <strong>browse</strong></p>
             <input type="file" id="fileInput" style="display: none;" accept="image/*,.doc,.docx,.pdf" multiple>
@@ -265,7 +258,7 @@
                 <option value="png">Convert to PNG (Image)</option>
                 <option value="webp">Convert to WebP (Optimized Image)</option>
                 <option value="pdf">Convert to PDF (Document)</option>
-                <option value="docx">Convert to Word DOCX (MS Office Document)</option>
+                <option value="docx">Convert to Word DOCX (AI Text Detection)</option>
             </select>
         </div>
 
@@ -302,6 +295,7 @@
                 <button id="scannerToPdfBtn">📄 Convert & Download PDF</button>
                 <button id="scannerToDocxBtn" class="btn-success">📝 Send to Word Workspace</button>
             </div>
+            <p style="font-size: 12px; color: #9ca3af; margin: 0 0 10px 0; font-style: italic;">💡 Mobile Tip: Hold your finger down on the image below for 2-3 seconds to download automatically!</p>
             <div class="scanner-preview-frame">
                 <canvas id="scannerCanvas"></canvas>
             </div>
@@ -312,20 +306,9 @@
     <div class="office-container">
         <h2>3. Advanced Table & Document Grid Workspace</h2>
         <div class="drop-zone" id="officeDropZone">
-            <p>Drag & drop your formatted table / <strong>.docx file</strong> here</p>
+            <p>Drag & drop your formatted table / <strong>.docx file</strong> here to open in a new editing window</p>
             <input type="file" id="officeFileInput" style="display: none;" accept=".doc,.docx">
             <span id="officeFileName"></span>
-        </div>
-
-        <div id="officeWorkspace" style="display: none; margin-top: 25px;">
-            <div class="office-toolbar-custom">
-                <button id="exportDocxBtn" class="btn-success">💾 Export as Clean Word Document (.docx)</button>
-                <button id="exportPdfBtn">📄 Export as PDF Document (.pdf)</button>
-            </div>
-            
-            <div class="editor-paper-frame">
-                <textarea id="wordEditor"></textarea>
-            </div>
         </div>
         <div id="officeStatus"></div>
     </div>
@@ -338,7 +321,6 @@
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    let editorInstance = null;
     let loadedDocBaseName = "Document Workspace";
     let scannerImageObject = null;
     let currentInputFileTotalSize = 0;
@@ -416,7 +398,6 @@
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
     function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
-    // UNIVERSAL SECURE DOWNLOAD FORCING ENGINE
     function triggerDownload(urlOrBlobData, filename) {
         try {
             const a = document.createElement('a');
@@ -434,7 +415,6 @@
                 if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href);
             }, 200);
         } catch (err) {
-            console.error("Download intercepted. Redirecting frame route directly...", err);
             const targetDataStream = (urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData;
             window.open(targetDataStream, '_blank');
         }
@@ -445,7 +425,7 @@
         if(!files.length) { alert('Upload files first.'); return; }
         
         status.className = "status-loading"; 
-        status.textContent = "⚙️ Executing [Process & Download Batch]: Splitting files and packing formatting chains...";
+        status.textContent = "⚙️ Processing layout parameters & loading text detectors...";
         let successCount = 0;
 
         for(let i=0; i<files.length; i++) {
@@ -456,31 +436,56 @@
             const quality = compressCheck.checked ? (qualityRange.value / 100) : 0.92;
 
             try {
+                // BRANCH A: CONVERT ANYTHING TO WORD DOCUMENT (WITH INTELLIGENT BLUR OCR DETECTION)
                 if(targetFormat === 'docx') {
-                    let blobs = [];
+                    let extractedText = "Document Extraction Sheet\n\n";
+                    
                     if(fileExt === 'pdf') {
+                        status.textContent = "🔍 Reading PDF structural pages and decoding character streams...";
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
                         for(let p=1; p<=pdf.numPages; p++) {
-                            const page = await pdf.getPage(p); const vp = page.getViewport({ scale: 1.5 });
-                            const cv = document.createElement('canvas'); cv.height = vp.height; cv.width = vp.width;
-                            await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-                            blobs.push({ blob: await getBlobFromCanvas(cv, 'image/jpeg', quality), w: cv.width, h: cv.height });
+                            const page = await pdf.getPage(p);
+                            const textContent = await page.getTextContent();
+                            extractedText += textContent.items.map(item => item.str).join(' ') + "\n";
                         }
                     } else if(fileExt === 'docx' || fileExt === 'doc') {
-                        const buffer = await readFileAsBuffer(file);
-                        triggerDownload(new Blob([buffer], { type: file.type }), `${baseName}_copy.${fileExt}`);
+                        const resHtml = await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) });
+                        extractedText = resHtml.value.replace(/<[^>]*>/g, '\n');
                     } else {
-                        const img = await loadImage(file); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
-                        cv.getContext('2d').drawImage(img, 0, 0);
-                        blobs.push({ blob: await getBlobFromCanvas(cv, 'image/jpeg', quality), w: img.width, h: img.height });
+                        // Image file target - activate AI Tesseract Scanner to process blur and extract rows
+                        status.textContent = "🧠 Activating Tesseract OCR Core: Processing blurry elements to extract typed text characters...";
+                        const img = await loadImage(file);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width; canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Perform an inline image contrast correction layout to maximize scanner precision
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const d = imgData.data;
+                        for(let k=0; k<d.length; k+=4) {
+                            let brightness = (d[k] + d[k+1] + d[k+2])/3;
+                            let f = (brightness > 140) ? 255 : brightness * 0.4;
+                            d[k] = f; d[k+1] = f; d[k+2] = f;
+                        }
+                        ctx.putImageData(imgData, 0, 0);
+
+                        const ocrResult = await Tesseract.recognize(canvas, 'eng');
+                        extractedText += ocrResult.data.text;
                     }
-                    if(blobs.length) {
-                        const children = blobs.map(b => { const sf = b.w > 550 ? (550 / b.w) : 1; return new docx.Paragraph({ children: [new docx.ImageRun({ data: b.blob, transformation: { width: b.w * sf, height: b.h * sf } })] }); });
-                        const docBlob = await docx.Packer.toBlob(new docx.Document({ sections: [{ children }] }));
-                        triggerDownload(docBlob, `${baseName}_converted.docx`);
-                    }
+
+                    // Convert raw lines into a secure, downloadable .docx binary string block
+                    const lines = extractedText.split('\n').filter(l => l.trim() !== '');
+                    const docParagraphs = lines.map(l => new docx.Paragraph({
+                        children: [new docx.TextRun({ text: l, font: "Segoe UI", size: 24 })],
+                        spacing: { after: 120 }
+                    }));
+
+                    const docBlob = await docx.Packer.toBlob(new docx.Document({ sections: [{ children: docParagraphs }] }));
+                    triggerDownload(docBlob, `${baseName}_converted.docx`);
                     successCount++;
                 } else {
+                    // Regular conversion blocks (PDF/Images target maps)
                     if(fileExt === 'pdf') {
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
                         for(let p=1; p<=pdf.numPages; p++) {
@@ -533,6 +538,8 @@
     const scannerCanvas = document.getElementById('scannerCanvas');
     const sCtx = scannerCanvas.getContext('2d');
 
+    let touchTimer = null;
+
     scannerDropZone.addEventListener('click', () => scannerFileInput.click());
     scannerDropZone.addEventListener('dragover', (e) => { e.preventDefault(); scannerDropZone.classList.add('drag-over'); });
     scannerDropZone.addEventListener('dragleave', () => scannerDropZone.classList.remove('drag-over'));
@@ -554,121 +561,128 @@
         sCtx.drawImage(scannerImageObject, 0, 0);
 
         scannerStatus.className = "status-success";
-        scannerStatus.textContent = "Photo loaded cleanly into preview window frame canvas.";
+        scannerStatus.textContent = "Photo loaded smoothly into context matrix.";
+        
+        setupLongPressEngine();
     }
 
-    // AI INTELLIGENT ADAPTIVE LUMINANCE FILTER (SMART SMARTPHONE SCANNER EMULATION)
+    // 2-3 SECONDS HOLD TO DOWNLOAD DETECTOR LOGIC (MOBILE OPTIMIZED)
+    function setupLongPressEngine() {
+        const startEvent = () => {
+            touchTimer = setTimeout(() => {
+                scannerStatus.className = "status-loading";
+                scannerStatus.textContent = "⏳ Long-press detected! Extracting binary canvas blob parameters directly to your local storage files...";
+                scannerCanvas.toBlob((blob) => {
+                    triggerDownload(blob, `Hold_Download_${Date.now()}.jpg`);
+                    scannerStatus.className = "status-success";
+                    scannerStatus.textContent = "✅ File downloaded successfully via hold parameters!";
+                }, 'image/jpeg', 0.95);
+            }, 2500); // Trigger timeline set exactly between 2 and 3 seconds
+        };
+
+        const cancelEvent = () => { if(touchTimer) clearTimeout(touchTimer); };
+
+        // Bind touch triggers for desktop clicks and smartphone screens
+        scannerCanvas.addEventListener('mousedown', startEvent);
+        scannerCanvas.addEventListener('mouseup', cancelEvent);
+        scannerCanvas.addEventListener('mouseleave', cancelEvent);
+        scannerCanvas.addEventListener('touchstart', startEvent, { passive: true });
+        scannerCanvas.addEventListener('touchend', cancelEvent);
+    }
+
     document.getElementById('enhanceClearBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "✨ Executing [AI Smart Scan & Brighten]: Running non-destructive adaptive ambient lighting logic loops to wash out foggy shadows smoothly...";
+        scannerStatus.textContent = "✨ Executing [AI Smart Scan & Brighten]: Balancing local ambient exposure layers smoothly...";
 
         setTimeout(() => {
             sCtx.drawImage(scannerImageObject, 0, 0);
             const imgData = sCtx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
-            const d = imgData.data;
-            const w = imgData.width;
-            const h = imgData.height;
+            const d = imgData.data; const w = imgData.width; const h = imgData.height;
 
-            // Step 1: Compute document lighting profile matrix benchmarks
-            let totalLuminance = 0;
-            let sampleRate = Math.round((w * h) / 1000) || 1;
-            let count = 0;
+            let totalLuminance = 0, count = 0, sampleRate = Math.round((w * h) / 1000) || 1;
             for (let i = 0; i < d.length; i += 4 * sampleRate) {
                 totalLuminance += (0.2126 * d[i] + 0.7152 * d[i+1] + 0.0722 * d[i+2]);
                 count++;
             }
             let dynamicAmbientAverage = totalLuminance / count;
 
-            // Step 2: Intelligent background contrast gain balancing loops (Retains colors)
             for (let i = 0; i < d.length; i += 4) {
                 let r = d[i], g = d[i+1], b = d[i+2];
                 let pixelLuminance = (0.2126 * r + 0.7152 * g + 0.0722 * b);
 
-                // If pixel belongs to hazy background paper gray parameters, pull it cleanly up to bright white
                 if (pixelLuminance > dynamicAmbientAverage - 15) {
                     let brightenBoost = (255 - pixelLuminance) * 0.85; 
-                    d[i]     = Math.min(255, r + brightenBoost);
-                    d[i + 1] = Math.min(255, g + brightenBoost);
-                    d[i + 2] = Math.min(255, b + brightenBoost);
+                    d[i] = Math.min(255, r + brightenBoost); d[i + 1] = Math.min(255, g + brightenBoost); d[i + 2] = Math.min(255, b + brightenBoost);
                 } else {
-                    // It's a key structural asset element text layer or photo block: deepen rich color saturation
                     let contrastFactor = 1.15;
-                    d[i]     = Math.min(255, Math.max(0, (r - 128) * contrastFactor + 128));
+                    d[i] = Math.min(255, Math.max(0, (r - 128) * contrastFactor + 128));
                     d[i + 1] = Math.min(255, Math.max(0, (g - 128) * contrastFactor + 128));
                     d[i + 2] = Math.min(255, Math.max(0, (b - 128) * contrastFactor + 128));
                 }
             }
-
             sCtx.putImageData(imgData, 0, 0);
             scannerStatus.className = "status-success";
-            scannerStatus.textContent = "✅ Action [AI Smart Scan & Brighten] Completed! Background cleared safely while preserving all raw colors perfectly.";
+            scannerStatus.textContent = "✅ Action [AI Smart Scan & Brighten] Completed!";
         }, 50);
     });
 
-    // FIXED SECURE PDF BINARY OBJECT STREAM DOWNLOAD PIPELINE
     document.getElementById('scannerToPdfBtn').addEventListener('click', () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "📄 Executing [Convert & Download PDF]: Converting canvas snapshot into a binary Blob to force system download protocol triggers...";
-        
+        scannerStatus.textContent = "📄 Executing [Convert & Download PDF]...";
         scannerCanvas.toBlob((blob) => {
-            if(!blob) {
-                scannerStatus.className = "status-error";
-                scannerStatus.textContent = "Error generating canvas binary image footprint.";
-                return;
-            }
-            const pdf = new jspdf.jsPDF({
-                orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p',
-                unit: 'px',
-                format: [scannerCanvas.width, scannerCanvas.height]
-            });
-            
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
+            const pdf = new jspdf.jsPDF({ orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p', unit: 'px', format: [scannerCanvas.width, scannerCanvas.height] });
+            const reader = new FileReader(); reader.readAsDataURL(blob);
             reader.onloadend = function() {
                 pdf.addImage(reader.result, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height);
-                const pdfBlobOutput = pdf.output('blob');
-                triggerDownload(pdfBlobOutput, `AI_Enhanced_Document_${Date.now()}.pdf`);
-                
-                scannerStatus.className = "status-success";
-                scannerStatus.textContent = "✅ Action [Convert & Download PDF] Completed! Forced secure system storage download.";
+                triggerDownload(pdf.output('blob'), `AI_Enhanced_Document_${Date.now()}.pdf`);
+                scannerStatus.className = "status-success"; scannerStatus.textContent = "✅ PDF Document downloaded successfully.";
             }
         }, 'image/jpeg', 0.95);
     });
 
-    document.getElementById('scannerToDocxBtn').addEventListener('click', () => {
+    document.getElementById('scannerToDocxBtn').addEventListener('click', async () => {
         if(!scannerImageObject) return;
         scannerStatus.className = "status-loading";
-        scannerStatus.textContent = "📝 Executing [Send to Word Workspace]: Packing high-contrast images into Section 3 editor fields...";
+        scannerStatus.textContent = "🧠 Running OCR Core Engine: Extracting blurry characters directly into editable plain text blocks...";
 
-        const cleanImgUrl = scannerCanvas.toDataURL('image/jpeg', 0.90);
-        const contentStructure = `
-            <p style="text-align:center;"><strong>Enhanced Document Attachment Workspace:</strong></p>
-            <table border="1" style="width:100%; border-collapse:collapse; text-align:center; font-family: 'Segoe UI', Arial, sans-serif;">
-                <tr>
-                    <td><img src="${cleanImgUrl}" style="max-width:100%; height:auto;" alt="Enhanced Sheet"/></td>
-                </tr>
-            </table>
-            <p style="font-family: 'Segoe UI', Arial, sans-serif;"><br/>👇 Type modifications or copy individual extracted table information numbers right here below:</p>
-        `;
+        try {
+            const ocrResult = await Tesseract.recognize(scannerCanvas, 'eng');
+            const cleanText = ocrResult.data.text;
 
-        officeWorkspace.style.display = "block";
-        officeFileName.textContent = "Imported from Photo Cleaner Workspace";
-        mountTinyMCE(contentStructure);
-        
-        document.getElementById('officeWorkspace').scrollIntoView({ behavior: 'smooth' });
-        scannerStatus.className = "status-success";
-        scannerStatus.textContent = "✅ Action [Send to Word Workspace] Completed! Workspace successfully synchronized below.";
+            // Generate an absolute, clean native HTML editor frame string payload
+            const lines = cleanText.split('\n').filter(l => l.trim() !== '');
+            const parsedRowsHtml = lines.map(l => `<tr><td style="padding:10px; border:1px solid #9ca3af;">${l}</td></tr>`).join('');
+            
+            const compiledHtmlStructure = `
+                <div style="padding:30px; font-family:'Segoe UI',Arial,sans-serif; background:white; color:black; max-width:800px; margin:auto;">
+                    <h2 style="text-align:center;">AI Extracted Document Grid</h2>
+                    <table style="width:100%; border-collapse:collapse; margin-top:20px;" border="1">
+                        ${parsedRowsHtml}
+                    </table>
+                </div>
+            `;
+
+            // Open a blank page configuration in a new browser window tab frame instantly
+            const editorWindowTab = window.open("", "_blank");
+            editorWindowTab.document.write(generateStandaloneEditorPage(compiledHtmlStructure, "Extracted Word Sheet"));
+            editorWindowTab.document.close();
+
+            scannerStatus.className = "status-success";
+            scannerStatus.textContent = "✅ Successfully parsed and launched inside a separate fullscreen editor tab!";
+        } catch (err) {
+            scannerStatus.className = "status-error"; scannerStatus.textContent = "OCR Text extraction failed.";
+            console.error(err);
+        }
     });
 
     // ==========================================
-    // SECTION 3: LIVE MS OFFICE GRID/TABLE CODE
+    // SECTION 3: OPEN FILE INDEPENDENT NEW TAB 
     // ==========================================
     const officeDropZone = document.getElementById('officeDropZone');
     const officeFileInput = document.getElementById('officeFileInput');
     const officeFileName = document.getElementById('officeFileName');
-    const officeWorkspace = document.getElementById('officeWorkspace');
     const officeStatus = document.getElementById('officeStatus');
 
     officeDropZone.addEventListener('click', () => officeFileInput.click());
@@ -676,135 +690,90 @@
     officeDropZone.addEventListener('dragleave', () => officeDropZone.classList.remove('drag-over'));
     officeDropZone.addEventListener('drop', (e) => {
         e.preventDefault(); officeDropZone.classList.remove('drag-over');
-        if(e.dataTransfer.files.length) { officeFileInput.files = e.dataTransfer.files; initWordSuiteEditor(); }
+        if(e.dataTransfer.files.length) { officeFileInput.files = e.dataTransfer.files; launchWordTabWindow(); }
     });
-    officeFileInput.addEventListener('change', initWordSuiteEditor);
+    officeFileInput.addEventListener('change', launchWordTabWindow);
 
-    async function initWordSuiteEditor() {
+    async function launchWordTabWindow() {
         const file = officeFileInput.files[0];
         if(!file) return;
 
         loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        officeFileName.textContent = `Active Table Sheet: ${file.name} (${formatBytes(file.size)})`;
         officeStatus.className = "status-loading";
-        officeStatus.textContent = "🔄 Synchronizing files... Parsing layout nodes and executing auto font-matching filters...";
+        officeStatus.textContent = "🔄 De-serializing OpenXML layout chains... Launching full workspace browser tab...";
 
         try {
             const buffer = await readFileAsBuffer(file);
-            const parseOptions = {
-                styleMap: [
-                    "p[style-name='Table Heading'] => h3:fresh",
-                    "table => table.office-grid-table"
-                ]
-            };
-            const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer }, parseOptions);
-            
-            let sanitizedHtml = parseResult.value;
-            let matchedFont = "Segoe UI, Arial, sans-serif"; 
-            if(sanitizedHtml.includes("font-family")) {
-                const match = sanitizedHtml.match(/font-family:\s*['"]?([^'"]+?)['"]?[;>]/);
-                if(match && match[1]) matchedFont = match[1];
-            }
+            const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
+            let docxHtmlContent = parseResult.value;
 
-            if(!sanitizedHtml.includes('<table')) {
-                sanitizedHtml = `<table border="1" style="width:100%; border-collapse:collapse; min-width:600px; font-family:${matchedFont};"><tr><td>${sanitizedHtml}</td></tr></table>`;
+            if(!docxHtmlContent.includes('<table')) {
+                docxHtmlContent = `<table border="1" style="width:100%; border-collapse:collapse; min-width:600px; padding:10px;"><tr><td>${docxHtmlContent}</td></tr></table>`;
             } else {
-                sanitizedHtml = sanitizedHtml.replace(/<table/g, `<table border="1" style="width:100%; border-collapse:collapse; min-width:700px; font-size:14px; text-align:center; font-family:${matchedFont};" cellpadding="5"`);
+                docxHtmlContent = docxHtmlContent.replace(/<table/g, '<table border="1" style="width:100%; border-collapse:collapse; min-width:700px; font-size:15px; text-align:center;" cellpadding="6"');
             }
 
-            sanitizedHtml = `<div style="font-family: ${matchedFont};">${sanitizedHtml}</div>`;
-            mountTinyMCE(sanitizedHtml, matchedFont);
+            // Fire up independent fullscreen tab workspace completely free of third-party framing software
+            const editorTab = window.open("", "_blank");
+            editorTab.document.write(generateStandaloneEditorPage(docxHtmlContent, loadedDocBaseName));
+            editorTab.document.close();
 
-            officeWorkspace.style.display = "block";
             officeStatus.className = "status-success";
-            officeStatus.textContent = `✅ Loaded! Font matching filter applied: Locked editor canvas to [${matchedFont}] matching your original sheets.`;
+            officeStatus.textContent = "✅ Workspace launched successfully inside a fresh browser tab view!";
         } catch(err) {
-            officeStatus.className = "status-error";
-            officeStatus.textContent = "Failed to sync spreadsheet formatting nodes.";
+            officeStatus.className = "status-error"; officeStatus.textContent = "Failed to launch window target.";
             console.error(err);
         }
     }
 
-    async function mountTinyMCE(content, lockedFont = "Segoe UI, Arial, sans-serif") {
-        if (tinymce.get('wordEditor')) {
-            tinymce.get('wordEditor').setContent(content);
-        } else {
-            await tinymce.init({
-                selector: '#wordEditor',
-                plugins: 'table lists advlist image code link directionality charmap preview emoticons',
-                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | table tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | bullist numlist | ltr rtl | removeformat',
-                height: 500,
-                menubar: true,
-                table_default_styles: { width: '100%', borderCollapse: 'collapse' },
-                content_style: `body { font-family:${lockedFont}; margin:20px; } table { width:100%; border-collapse:collapse; margin-bottom:10px; font-family:${lockedFont}; } td, th { border:1px solid #9ca3af; padding:6px; min-width:50px; word-break:break-word; font-family:${lockedFont}; } th { background-color:#f3f4f6; }`,
-                setup: function (editor) { editorInstance = editor; }
-            });
-            tinymce.get('wordEditor').setContent(content);
-        }
+    // STANDALONE NATIVE WORD COMPLIANT FULLSCREEN EDITOR PAGE COMPILER TEMPLATE
+    function generateStandaloneEditorPage(innerHtmlText, filename) {
+        return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Editing: ${filename}</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
+            <style>
+                body { margin: 0; background-color: #4b5563; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+                .menu-bar { background: #1e1e2e; padding: 12px 20px; display: flex; gap: 15px; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+                .menu-bar h3 { color: #f5c2e7; margin: 0; font-size: 16px; margin-right: 20px; }
+                .menu-bar button { background: #89b4fa; color: #11111b; border: none; padding: 8px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+                .menu-bar button:hover { background: #b4befe; }
+                .menu-bar .btn-pdf { background: #a6e3a1; }
+                .menu-bar .btn-pdf:hover { background: #94e2d5; }
+                .paper-container { flex: 1; overflow: auto; padding: 40px 20px; display: flex; justify-content: center; }
+                .word-document-canvas { background: #ffffff; width: 100%; max-width: 850px; min-height: 1050px; padding: 60px 80px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 4px; outline: none; color: #000000; font-size: 16px; line-height: 1.6; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                td, th { border: 1px solid #111; padding: 8px; font-family: inherit; }
+            <\/style>
+        </head>
+        <body>
+            <div class="menu-bar">
+                <h3>Workspace: ${filename}</h3>
+                <button onclick="window.close()">❌ Close Editor</button>
+                <button class="btn-pdf" onclick="saveAsPdf()">📄 Save & Download PDF</button>
+            </div>
+            <div class="paper-container">
+                <div class="word-document-canvas" contenteditable="true" id="canvasTextarea">${innerHtmlText}</div>
+            </div>
+
+            <script>
+                function saveAsPdf() {
+                    const content = document.getElementById('canvasTextarea').innerHTML;
+                    const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                    pdf.html(content, {
+                        x: 40, y: 40, width: 515, windowWidth: 750,
+                        callback: function(doc) {
+                            doc.save("${filename}_edited.pdf");
+                        }
+                    });
+                }
+            <\/script>
+        </body>
+        </html>
+        `;
     }
-
-    // EXPORT TO WORD
-    document.getElementById('exportDocxBtn').addEventListener('click', async () => {
-        if(!editorInstance) return;
-        officeStatus.className = "status-loading"; 
-        officeStatus.textContent = "💾 Executing [Export as Clean Word Document]: Packing strings into standard OpenXML byte targets...";
-
-        try {
-            const editorHtml = editorInstance.getContent();
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = editorHtml;
-            const rowsHtml = tempDiv.querySelectorAll('tr');
-
-            let docParagraphs = [];
-
-            if (rowsHtml.length > 0) {
-                rowsHtml.forEach(row => {
-                    const cells = row.querySelectorAll('td, th');
-                    const cellTexts = Array.from(cells).map(c => c.innerText.trim()).join(' | ');
-                    if(cellTexts.replace(/\|/g, '').trim() !== "") {
-                        docParagraphs.push(new docx.Paragraph({
-                            children: [new docx.TextRun({ text: cellTexts, font: "Segoe UI", size: 22 })],
-                            spacing: { after: 120 }
-                        }));
-                    }
-                });
-            } else {
-                const textLines = tempDiv.innerText.split('\n').filter(line => line.trim() !== '');
-                docParagraphs = textLines.map(line => new docx.Paragraph({
-                    children: [new docx.TextRun({ text: line, font: "Segoe UI", size: 24 })]
-                }));
-            }
-
-            const doc = new docx.Document({ sections: [{ children: docParagraphs }] });
-            const docxBlob = await docx.Packer.toBlob(doc);
-            triggerDownload(docxBlob, `${loadedDocBaseName}_edited.docx`);
-            
-            officeStatus.className = "status-success"; 
-            officeStatus.textContent = "✅ Action [Export as Clean Word Document] Completed successfully!";
-        } catch(err) {
-            officeStatus.className = "status-error"; officeStatus.textContent = "Error compiling file assets.";
-        }
-    });
-
-    // EXPORT TO PDF
-    document.getElementById('exportPdfBtn').addEventListener('click', async () => {
-        if(!editorInstance) return;
-        officeStatus.className = "status-loading"; 
-        officeStatus.textContent = "📄 Executing [Export as PDF Document]: Flattening tabular grids into landscape vectors...";
-
-        try {
-            const htmlContent = editorInstance.getContent();
-            const pdf = new jspdf.jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
-            await pdf.html(htmlContent, { x: 20, y: 30, width: 750, windowWidth: 900 });
-            
-            triggerDownload(pdf.output('blob'), `${loadedDocBaseName}_edited.pdf`);
-            
-            officeStatus.className = "status-success"; 
-            officeStatus.textContent = "✅ Action [Export as PDF Document] Completed successfully!";
-        } catch(err) {
-            officeStatus.className = "status-error"; officeStatus.textContent = "PDF matrix formatting failed.";
-        }
-    });
 </script>
 </body>
 </html>
