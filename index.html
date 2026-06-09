@@ -206,7 +206,7 @@
             user-select: none;
         }
 
-        /* Fullscreen Integrated MS Word Editor Overlays */
+        /* Fullscreen Integrated Office Viewport Overlay */
         .office-fullscreen-modal {
             position: fixed;
             top: 0;
@@ -248,12 +248,53 @@
         .opt-btn strong { font-size: 14px; color: #106ebe; }
 
         .workspace-viewport { flex: 1; overflow: auto; padding: 35px 10px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; width: 100vw; }
-        .a4-paper-sheet { background: #ffffff; width: 100%; max-width: 816px; min-height: 1056px; padding: 50px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
+        .a4-paper-sheet { background: #ffffff; width: 100%; max-width: 816px; min-height: 1056px; padding: 60px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
         th, td { border: 1px solid #4b5563; padding: 10px 6px; text-align: center; vertical-align: middle; word-break: break-all; font-size: 13px; outline: none; }
         th { background-color: #106ebe; color: #ffffff; font-weight: 600; }
         td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
+
+        /* Dialog Export Modal Box Layout */
+        .dialog-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 999999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dialog-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .dialog-card h3 { margin-top: 0; margin-bottom: 12px; color: #111827; font-size: 18px; }
+        .dialog-card p { font-size: 14px; color: #6b7280; margin-bottom: 20px; }
+        .dialog-btn-stack { display: flex; flex-direction: column; gap: 10px; }
+        .dialog-btn-stack button { padding: 12px; font-weight: 600; border-radius: 6px; }
+        .btn-secondary { background-color: #f3f4f6; color: #374151; }
+        .btn-secondary:hover { background-color: #e5e7eb; }
+
+        #status, #scannerStatus, #officeStatus, #modalStatusMsg {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: pre-line;
+        }
+        .status-loading { color: var(--primary); }
+        .status-success { color: var(--success); }
     </style>
 </head>
 <body>
@@ -343,8 +384,8 @@
             <span class="word-title" id="modalDocTitle">Microsoft Word Online Workspace</span>
         </div>
         <div class="ribbon-actions">
-            <button class="btn-close" id="modalCloseBtn">❌ Close Document</button>
-            <button id="modalPdfBtn">📄 Export PDF File Blueprint</button>
+            <button class="btn-close" id="modalCloseBtn">❌ Close</button>
+            <button id="modalExportBtn" style="background-color: #a6e3a1; color: #11111b;">📤 Export Document</button>
         </div>
     </div>
 
@@ -370,11 +411,30 @@
 
     <div class="workspace-viewport">
         <div class="a4-paper-sheet" contenteditable="true" id="editorCoreSheet" spellcheck="false"></div>
+        <div id="modalStatusMsg"></div>
+    </div>
+</div>
+
+<div class="dialog-modal-overlay" id="dialogModal">
+    <div class="dialog-card">
+        <h3>Export Workspace Blueprint</h3>
+        <p>Select your desired output extension layout format to save back onto your mobile device:</p>
+        <div class="dialog-btn-stack">
+            <button class="btn-success" id="dialogPdfBtn">📄 Convert & Download as PDF</button>
+            <button id="dialogDocxBtn">📝 Save as Microsoft Word (.docx)</button>
+            <button class="btn-secondary" id="dialogCancelBtn">Cancel</button>
+        </div>
     </div>
 </div>
 
 <script>
-    const dropZone = document.getElementById('dropZone');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let loadedDocBaseName = "Document Workspace";
+    let scannerImageObject = null;
+    let currentInputFileTotalSize = 0;
+
+    // Core conversion UI mapping
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
     const convertBtn = document.getElementById('convertBtn');
@@ -386,66 +446,50 @@
     const status = document.getElementById('status');
     const compressionEstimate = document.getElementById('compressionEstimate');
 
-    const officeDropZone = document.getElementById('officeDropZone');
+    // Section 3 workspace mapping
     const officeFileInput = document.getElementById('officeFileInput');
     const officeFileName = document.getElementById('officeFileName');
     const officeStatus = document.getElementById('officeStatus');
-
     const officeModal = document.getElementById('officeModal');
     const editorCoreSheet = document.getElementById('editorCoreSheet');
     const modalDocTitle = document.getElementById('modalDocTitle');
+    const modalStatusMsg = document.getElementById('modalStatusMsg');
 
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault(); dropZone.classList.remove('drag-over');
+    // Dialog menu selector mapping
+    const dialogModal = document.getElementById('dialogModal');
+
+    document.getElementById('dropZone').addEventListener('click', () => fileInput.click());
+    document.getElementById('dropZone').addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); });
+    document.getElementById('dropZone').addEventListener('dragleave', (e) => e.currentTarget.classList.remove('drag-over'));
+    document.getElementById('dropZone').addEventListener('drop', (e) => {
+        e.preventDefault(); e.currentTarget.classList.remove('drag-over');
         if(e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; updateFileNameDisplay(); }
     });
     fileInput.addEventListener('change', updateFileNameDisplay);
 
     function formatBytes(bytes) {
         if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     function updateFileNameDisplay() {
-        const len = fileInput.files.length;
-        currentInputFileTotalSize = 0;
+        const len = fileInput.files.length; currentInputFileTotalSize = 0;
         for(let i=0; i<len; i++) { currentInputFileTotalSize += fileInput.files[i].size; }
-
-        if(len === 1) {
-            fileName.textContent = `📄 ${fileInput.files[0].name} (${formatBytes(currentInputFileTotalSize)})`;
-        } else if (len > 1) {
-            fileName.innerHTML = `<strong>Selected ${len} files (${formatBytes(currentInputFileTotalSize)} total):</strong><br>` + Array.from(fileInput.files).map(f => `• ${f.name} (${formatBytes(f.size)})`).join('<br>');
-        }
+        if(len === 1) fileName.textContent = `📄 ${fileInput.files[0].name} (${formatBytes(currentInputFileTotalSize)})`;
+        else if (len > 1) fileName.innerHTML = `<strong>Selected ${len} files (${formatBytes(currentInputFileTotalSize)} total):</strong><br>` + Array.from(fileInput.files).map(f => `• ${f.name} (${formatBytes(f.size)})`).join('<br>');
         calculateLiveCompressionEstimate();
     }
 
-    compressCheck.addEventListener('change', () => { 
-        sliderPanel.style.display = compressCheck.checked ? 'block' : 'none'; 
-        calculateLiveCompressionEstimate();
-    });
-    qualityRange.addEventListener('input', () => { 
-        qualityVal.textContent = qualityRange.value + '%'; 
-        calculateLiveCompressionEstimate();
-    });
+    compressCheck.addEventListener('change', () => { sliderPanel.style.display = compressCheck.checked ? 'block' : 'none'; calculateLiveCompressionEstimate(); });
+    qualityRange.addEventListener('input', () => { qualityVal.textContent = qualityRange.value + '%'; calculateLiveCompressionEstimate(); });
 
     function calculateLiveCompressionEstimate() {
-        if(!compressCheck.checked || currentInputFileTotalSize === 0) {
-            compressionEstimate.style.display = "none";
-            return;
-        }
+        if(!compressCheck.checked || currentInputFileTotalSize === 0) { compressionEstimate.style.display = "none"; return; }
         compressionEstimate.style.display = "inline-block";
         const targetPct = qualityRange.value;
-        let modifier = 0.95; 
-        if(targetPct < 30) modifier = 0.35;
-        else if (targetPct < 60) modifier = 0.55;
-        else if (targetPct < 85) modifier = 0.78;
-
+        let modifier = 0.95; if(targetPct < 30) modifier = 0.35; else if (targetPct < 60) modifier = 0.55; else if (targetPct < 85) modifier = 0.78;
         const estimatedSize = Math.round(currentInputFileTotalSize * (targetPct / 100) * modifier);
         const reductionPct = Math.round(((currentInputFileTotalSize - estimatedSize) / currentInputFileTotalSize) * 100);
         compressionEstimate.textContent = `📊 Target: ${targetPct}% Quality Selection | Estimated Output size: ~${formatBytes(estimatedSize)} (Saved roughly ${reductionPct}% space)`;
@@ -453,53 +497,39 @@
 
     function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
+    function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
     function triggerDownload(urlOrBlobData, filename) {
         try {
             const a = document.createElement('a');
-            if (urlOrBlobData instanceof Blob) {
-                a.href = URL.createObjectURL(urlOrBlobData);
-            } else {
-                a.href = urlOrBlobData;
-            }
+            a.href = (urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData;
             a.download = filename;
-            document.body.appendChild(a);
-            a.click();
+            document.body.appendChild(a); a.click();
             setTimeout(() => { a.remove(); if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href); }, 200);
         } catch (err) {
-            const targetDataStream = (urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData;
-            window.open(targetDataStream, '_blank');
+            window.open((urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData, '_blank');
         }
     }
 
+    // AI TEXT & MATRIX LAYOUT GENERATION ALGORITHM ENGINE
     function convertTextToStructuredHtml(rawText) {
         const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-        let htmlOutput = "";
-        let tableRows = [];
-        let infoBlocks = [];
-
+        let htmlOutput = ""; let tableRows = []; let infoBlocks = [];
         const metadataRegex = /(name\s*:\s*|bill\s*no\s*:\s*|date\s*:\s*|address\s*:\s*|owner\s*name\s*:\s*|license\s*:\s*|bank\s*:\s*|email\s*:\s*|mobile\s*:\s*|tin\s*no\s*:\s*|biin\s*:\s*|e-tin\s*:\s*)/i;
 
         lines.forEach(line => {
             const cells = line.split(/[|│├┤┼║🛑\t,-]|\s{2,}/).map(c => c.trim()).filter(c => c.length > 0 && c !== '"');
-            
             const isTableLine = cells.length > 1 && (
-                /^\d+$/.test(cells[0]) || 
-                /^\d+\.$/.test(cells[0]) ||
-                line.toLowerCase().includes("total") || 
-                line.toLowerCase().includes("sl") || 
-                line.toLowerCase().includes("amount") ||
-                line.toLowerCase().includes("charge") ||
-                line.toLowerCase().includes("salary") ||
-                /^\d+[\d,.]*/.test(cells[cells.length - 1]) ||
+                /^\d+$/.test(cells[0]) || /^\d+\.$/.test(cells[0]) ||
+                line.toLowerCase().includes("total") || line.toLowerCase().includes("sl") || 
+                line.toLowerCase().includes("amount") || line.toLowerCase().includes("charge") ||
+                line.toLowerCase().includes("salary") || /^\d+[\d,.]*/.test(cells[cells.length - 1]) ||
                 cells[cells.length - 1].toLowerCase().includes("tk")
             );
 
-            if (isTableLine) {
-                tableRows.push(cells);
-            } else if (metadataRegex.test(line) || line.includes(":")) {
-                infoBlocks.push(line);
-            } else {
+            if (isTableLine) { tableRows.push(cells); } 
+            else if (metadataRegex.test(line) || line.includes(":")) { infoBlocks.push(line); } 
+            else {
                 if (line.toLowerCase().includes("bill") || line.toUpperCase() === "BILL") {
                     htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; text-transform:uppercase; font-size:24px; font-weight:800; border:none; padding:0;">${line}</h2>`;
                 } else if(line.toLowerCase().includes("engineering") || line.toLowerCase().includes("maintenance") || line.toLowerCase().includes("office") || line.toLowerCase().includes("food") || line.toLowerCase().includes("bakery")) {
@@ -514,18 +544,14 @@
             htmlOutput += `<div style="margin: 20px 0; padding: 15px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size:14px; line-height:1.6;">`;
             infoBlocks.forEach(item => {
                 const parts = item.split(":");
-                if(parts.length >= 2) {
-                    htmlOutput += `<div><strong>${parts[0].trim()}:</strong> ${parts.slice(1).join(":").trim()}</div>`;
-                } else {
-                    htmlOutput += `<div>${item}</div>`;
-                }
+                if(parts.length >= 2) htmlOutput += `<div><strong>${parts[0].trim()}:</strong> ${parts.slice(1).join(":").trim()}</div>`;
+                else htmlOutput += `<div>${item}</div>`;
             });
             htmlOutput += `</div>`;
         }
 
         if (tableRows.length > 0) {
             htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center;">`;
-            
             tableRows.forEach((row) => {
                 const isHeader = row.some(cell => cell.toLowerCase().includes("sl") || cell.toLowerCase().includes("name") || cell.toLowerCase().includes("amount") || cell.toLowerCase().includes("tax") || cell.toLowerCase().includes("charge"));
                 const isTotal = row.some(cell => cell.toLowerCase().includes("total"));
@@ -540,9 +566,7 @@
                         htmlOutput += `<td colspan="2" style="padding: 12px 8px; border: 1px solid #4b5563; text-align: right; padding-right: 25px;">${row[0]}</td>`;
                         htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; font-size:15px; font-weight:bold;">${row[1]}</td>`;
                     } else {
-                        row.forEach((cell, idx) => {
-                            htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; ${idx === row.length-1 ? 'font-size:15px; font-weight:bold;' : ''}">${cell}</td>`;
-                        });
+                        row.forEach((cell, idx) => { htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; ${idx === row.length-1 ? 'font-size:15px; font-weight:bold;' : ''}">${cell}</td>`; });
                     }
                     htmlOutput += `</tr>`;
                 } else {
@@ -551,35 +575,27 @@
                     htmlOutput += `</tr>`;
                 }
             });
-
             htmlOutput += `</table>`;
         }
-
         return htmlOutput;
     }
 
     convertBtn.addEventListener('click', async () => {
-        const files = fileInput.files;
-        if(!files.length) { alert('Upload files first.'); return; }
+        const files = fileInput.files; if(!files.length) { alert('Upload files first.'); return; }
         status.className = "status-loading"; status.textContent = "⚙️ Processing layouts and applying OCR engines...";
         let successCount = 0;
 
         for(let i=0; i<files.length; i++) {
-            const file = files[i];
-            const fileExt = file.name.split('.').pop().toLowerCase();
+            const file = files[i]; const fileExt = file.name.split('.').pop().toLowerCase();
             const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-            const targetFormat = formatSelect.value;
-            const quality = compressCheck.checked ? (qualityRange.value / 100) : 0.92;
+            const targetFormat = formatSelect.value; const quality = compressCheck.checked ? (qualityRange.value / 100) : 0.92;
 
             try {
                 if(targetFormat === 'docx') {
                     let extractedText = "";
                     if(fileExt === 'pdf') {
                         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
-                        for(let p=1; p<=pdf.numPages; p++) {
-                            const page = await pdf.getPage(p);
-                            extractedText += (await page.getTextContent()).items.map(item => item.str).join(' ') + "\n";
-                        }
+                        for(let p=1; p<=pdf.numPages; p++) { extractedText += (await (await pdf.getPage(p)).getTextContent()).items.map(item => item.str).join(' ') + "\n"; }
                     } else if(fileExt === 'docx' || fileExt === 'doc') {
                         extractedText = (await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) })).value.replace(/<[^>]*>/g, '\n');
                     } else {
@@ -587,8 +603,7 @@
                         const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
                         const imgData = ctx.getImageData(0, 0, cv.width, cv.height); const d = imgData.data;
                         for(let k=0; k<d.length; k+=4) { let b = (d[k] + d[k+1] + d[k+2])/3; let f = (b > 140) ? 255 : b * 0.4; d[k] = f; d[k+1] = f; d[k+2] = f; }
-                        ctx.putImageData(imgData, 0, 0);
-                        extractedText += (await Tesseract.recognize(cv, 'eng')).data.text;
+                        ctx.putImageData(imgData, 0, 0); extractedText += (await Tesseract.recognize(cv, 'eng')).data.text;
                     }
                     const lines = extractedText.split('\n').filter(l => l.trim() !== '');
                     const docParagraphs = lines.map(l => new docx.Paragraph({ children: [new docx.TextRun({ text: l, font: "Segoe UI", size: 24 })], spacing: { after: 120 } }));
@@ -624,9 +639,7 @@
                             const pdf = new jspdf.jsPDF({ orientation: img.width > img.height ? 'l' : 'p', unit: 'px', format: [img.width, img.height] });
                             pdf.addImage(cv.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height);
                             triggerDownload(pdf.output('blob'), `${baseName}_processed.pdf`);
-                        } else {
-                            triggerDownload(cv.toDataURL(`image/${targetFormat || fileExt}`, quality), `${baseName}_processed.${targetFormat || fileExt}`);
-                        }
+                        } else { triggerDownload(cv.toDataURL(`image/${targetFormat || fileExt}`, quality), `${baseName}_processed.${targetFormat || fileExt}`); }
                         successCount++;
                     }
                 }
@@ -733,77 +746,127 @@
     async function launchWordTabWindow() {
         const file = officeFileInput.files[0]; if(!file) return;
         loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        officeStatus.className = "status-loading"; officeStatus.textContent = "🔄 De-serializing OpenXML layout chains...";
+        officeStatus.className = "status-loading"; officeStatus.textContent = "🔄 De-serializing OpenXML document schemas...";
 
         try {
             const buffer = await readFileAsBuffer(file);
             const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
             const structuredHtmlContent = convertTextToStructuredHtml(parseResult.value.replace(/<[^>]*>/g, '\n'));
-            
             openFullscreenWorkspace(loadedDocBaseName, structuredHtmlContent);
             officeStatus.className = "status-success"; officeStatus.textContent = "✅ Active Suite workspace synchronized.";
         } catch(err) { officeStatus.className = "status-error"; console.error(err); }
     }
 
-    // INTERACTIVE OVERLAY WORKSPACE HANDLERS
     function openFullscreenWorkspace(title, htmlContent) {
         modalDocTitle.textContent = `${title} - Microsoft Word Online`;
         editorCoreSheet.innerHTML = htmlContent;
         officeModal.style.display = "flex";
-        document.body.style.overflow = "hidden"; // Freeze background window scrolling
+        document.body.style.overflow = "hidden";
+        modalStatusMsg.textContent = "";
     }
 
-    document.getElementById('modalCloseBtn').addEventListener('click', () => {
-        officeModal.style.display = "none";
-        document.body.style.overflow = "auto";
-    });
+    document.getElementById('modalCloseBtn').addEventListener('click', () => { officeModal.style.display = "none"; document.body.style.overflow = "auto"; });
 
-    // Ribbon Command Actions Mapping
-    function execCmd(command) {
-        document.execCommand(command, false, null);
-        editorCoreSheet.focus();
-    }
+    function execCmd(command) { document.execCommand(command, false, null); editorCoreSheet.focus(); }
     document.getElementById('btnBold').addEventListener('click', () => execCmd('bold'));
     document.getElementById('btnItalic').addEventListener('click', () => execCmd('italic'));
     document.getElementById('btnUnderline').addEventListener('click', () => execCmd('underline'));
     document.getElementById('btnLeftAlign').addEventListener('click', () => execCmd('justifyLeft'));
     document.getElementById('btnCenterAlign').addEventListener('click', () => execCmd('justifyCenter'));
 
-    // Dynamic Grid Modifiers
     function modifyTable(action) {
         const selection = window.getSelection(); if (!selection.rangeCount) return;
         let cell = selection.anchorNode;
         while (cell && cell.nodeName !== 'TD' && cell.nodeName !== 'TH') { cell = cell.parentNode; }
-        if (!cell) { alert("Click inside a grid block to append structures."); return; }
-        
+        if (!cell) { alert("Click inside a table block cell first."); return; }
         const row = cell.parentNode; const table = row.parentNode; const cellIndex = cell.cellIndex;
         if (action === 'insertRowAfter') {
             const newRow = row.cloneNode(true); Array.from(newRow.cells).forEach(c => c.innerHTML = "&nbsp;");
             row.parentNode.insertBefore(newRow, row.nextSibling);
-        } else if (action === 'deleteRow') {
-            if (table.rows.length > 1) row.remove();
+        } else if (action === 'deleteRow') { if (table.rows.length > 1) row.remove();
         } else if (action === 'insertColAfter') {
             Array.from(table.rows).forEach(r => { const nc = r.cells[cellIndex].cloneNode(true); nc.innerHTML = "&nbsp;"; r.insertBefore(nc, r.cells[cellIndex].nextSibling); });
-        } else if (action === 'deleteCol') {
-            if (row.cells.length > 1) Array.from(table.rows).forEach(r => r.cells[cellIndex].remove());
-        }
+        } else if (action === 'deleteCol') { if (row.cells.length > 1) Array.from(table.rows).forEach(r => r.cells[cellIndex].remove()); }
     }
     document.getElementById('btnRowBelow').addEventListener('click', () => modifyTable('insertRowAfter'));
     document.getElementById('btnDelRow').addEventListener('click', () => modifyTable('deleteRow'));
     document.getElementById('btnColAfter').addEventListener('click', () => modifyTable('insertColAfter'));
     document.getElementById('btnDelCol').addEventListener('click', () => modifyTable('deleteCol'));
 
-    // Secure Embedded PDF Canvas Printer Linkage Execution
-    document.getElementById('modalPdfBtn').addEventListener('click', () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-        
-        doc.html(editorCoreSheet, {
-            x: 20, y: 20, width: 550, windowWidth: 816,
-            callback: function(pdfInstance) {
-                triggerDownload(pdfInstance.output('blob'), `Edited_Office_Snapshot_${Date.now()}.pdf`);
+    // ==========================================
+    // INTERACTIVE EXPORT DIALOG POPUP ENGINE
+    // ==========================================
+    const modalExportBtn = document.getElementById('modalExportBtn');
+    const dialogCancelBtn = document.getElementById('dialogCancelBtn');
+    const dialogPdfBtn = document.getElementById('dialogPdfBtn');
+    const dialogDocxBtn = document.getElementById('dialogDocxBtn');
+
+    modalExportBtn.addEventListener('click', () => dialogModal.style.display = "flex");
+    dialogCancelBtn.addEventListener('click', () => dialogModal.style.display = "none");
+
+    // Option 1: Render Canvas Vectors directly to Mobile Storage PDF Blob
+    dialogPdfBtn.addEventListener('click', () => {
+        dialogModal.style.display = "none";
+        modalStatusMsg.className = "status-loading";
+        modalStatusMsg.textContent = "📄 Flattening rich canvas layers directly to mobile storage PDF files...";
+
+        setTimeout(() => {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                
+                doc.html(editorCoreSheet, {
+                    x: 20, y: 20, width: 550, windowWidth: 816,
+                    callback: function(pdfInstance) {
+                        const pdfBlobOutput = pdfInstance.output('blob');
+                        triggerDownload(pdfBlobOutput, `${loadedDocBaseName}_Edited_Blueprint.pdf`);
+                        modalStatusMsg.className = "status-success";
+                        modalStatusMsg.textContent = "✅ Export to PDF completed successfully!";
+                    }
+                });
+            } catch (err) {
+                modalStatusMsg.className = "status-error"; modalStatusMsg.textContent = "PDF compile crashed.";
             }
-        });
+        }, 100);
+    });
+
+    // Option 2: Repack current workspace sub-nodes back to clean Microsoft Word (.docx)
+    dialogDocxBtn.addEventListener('click', async () => {
+        dialogModal.style.display = "none";
+        modalStatusMsg.className = "status-loading";
+        modalStatusMsg.textContent = "💾 Repacking matrix blocks to clean MS Word document blocks...";
+
+        try {
+            // Strip out tabular rows and translate them back to docx Paragraph nodes
+            const rows = editorCoreSheet.querySelectorAll('tr');
+            let docParagraphs = [];
+
+            if (rows.length > 0) {
+                rows.forEach(row => {
+                    const cellTexts = Array.from(row.querySelectorAll('td, th')).map(c => c.innerText.trim()).join(' | ');
+                    if(cellTexts.replace(/\|/g, '').trim() !== "") {
+                        docParagraphs.push(new docx.Paragraph({
+                            children: [new docx.TextRun({ text: cellTexts, font: "Segoe UI", size: 22 })],
+                            spacing: { after: 120 }
+                        }));
+                    }
+                });
+            } else {
+                const textLines = editorCoreSheet.innerText.split('\n').filter(line => line.trim() !== '');
+                docParagraphs = textLines.map(line => new docx.Paragraph({
+                    children: [new docx.TextRun({ text: line, font: "Segoe UI", size: 24 })]
+                }));
+            }
+
+            const doc = new docx.Document({ sections: [{ children: docParagraphs }] });
+            const docxBlob = await docx.Packer.toBlob(doc);
+            
+            triggerDownload(docxBlob, `${loadedDocBaseName}_Edited_Document.docx`);
+            modalStatusMsg.className = "status-success";
+            modalStatusMsg.textContent = "✅ Export as Word (.docx) completed successfully!";
+        } catch (err) {
+            modalStatusMsg.className = "status-error"; modalStatusMsg.textContent = "Word compiler package crashed.";
+        }
     });
 </script>
 </body>
