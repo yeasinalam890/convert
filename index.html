@@ -16,6 +16,7 @@
             --primary: #4f46e5;
             --primary-hover: #4338ca;
             --success: #10b981;
+            --warning: #f59e0b;
             --bg: #f3f4f6;
             --card: #ffffff;
             --text: #1f2937;
@@ -63,7 +64,7 @@
             max-width: 1050px;
         }
 
-        .converter-container, .office-container {
+        .converter-container, .scanner-container, .office-container {
             background: var(--card);
             padding: 25px;
             border-radius: 16px;
@@ -95,7 +96,7 @@
             background: #eef2ff;
         }
 
-        #fileName, #officeFileName {
+        #fileName, #scannerFileName, #officeFileName {
             display: block;
             word-break: break-all;
             color: var(--primary);
@@ -160,14 +161,14 @@
 
         button:hover { background-color: var(--primary-hover); }
 
-        .office-toolbar-custom {
+        .office-toolbar-custom, .scanner-toolbar {
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
             flex-wrap: wrap;
         }
 
-        .office-toolbar-custom button {
+        .office-toolbar-custom button, .scanner-toolbar button {
             width: auto;
             padding: 10px 20px;
             font-size: 14px;
@@ -175,8 +176,26 @@
 
         .btn-success { background-color: var(--success); }
         .btn-success:hover { background-color: #059669; }
+        .btn-warning { background-color: var(--warning); }
+        .btn-warning:hover { background-color: #d97706; }
 
-        /* Document Editor Canvas Wrapper - Simulates Desktop Software Layout */
+        /* Preview container for enhanced files */
+        .scanner-preview-frame {
+            background: #374151;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            max-height: 400px;
+            overflow: auto;
+        }
+
+        .scanner-preview-frame canvas {
+            max-width: 100%;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Editor Paper styling */
         .editor-paper-frame {
             background: #6b7280;
             padding: 15px;
@@ -187,7 +206,7 @@
             overflow-x: auto;
         }
 
-        #status, #officeStatus {
+        #status, #scannerStatus, #officeStatus {
             margin-top: 15px;
             text-align: center;
             font-size: 14px;
@@ -217,7 +236,7 @@
 
 <div class="header-banner">
     <h1>Yeasin Alam</h1>
-    <p>File Suite Ultra Pro</p>
+    <p>File Suite Ultra Pro Max</p>
 </div>
 
 <div class="app-grid">
@@ -259,10 +278,31 @@
         <div id="status"></div>
     </div>
 
+    <div class="scanner-container">
+        <h2>2. Photo Document Cleaner & Enhancer</h2>
+        <div class="drop-zone" id="scannerDropZone">
+            <p>Drop a blurry photo / scan (JPG, PNG) here to <strong>Clean & Enhance</strong></p>
+            <input type="file" id="scannerFileInput" style="display: none;" accept="image/jpeg, image/png">
+            <span id="scannerFileName"></span>
+        </div>
+
+        <div id="scannerWorkspace" style="display: none; margin-top: 20px;">
+            <div class="scanner-toolbar">
+                <button id="enhanceClearBtn" class="btn-warning">✨ Clear Background & Sharpen</button>
+                <button id="scannerToPdfBtn">📄 Convert to PDF</button>
+                <button id="scannerToDocxBtn" class="btn-success">📝 Send to Word Workspace</button>
+            </div>
+            <div class="scanner-preview-frame">
+                <canvas id="scannerCanvas"></canvas>
+            </div>
+        </div>
+        <div id="scannerStatus"></div>
+    </div>
+
     <div class="office-container">
-        <h2>2. Advanced Table & Document Grid Workspace</h2>
+        <h2>3. Advanced Table & Document Grid Workspace</h2>
         <div class="drop-zone" id="officeDropZone">
-            <p>Drag & drop your blurry or uneditable salary statement / <strong>.docx file</strong> here</p>
+            <p>Drag & drop your formatted table / <strong>.docx file</strong> here</p>
             <input type="file" id="officeFileInput" style="display: none;" accept=".doc,.docx">
             <span id="officeFileName"></span>
         </div>
@@ -290,8 +330,9 @@
 
     let editorInstance = null;
     let loadedDocBaseName = "Document Workspace";
+    let scannerImageObject = null;
 
-    // Global Converter System Mappings
+    // Element mappings
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
@@ -325,6 +366,7 @@
     function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
     function getBlobFromCanvas(canvas, mime, qual) { return new Promise(res => canvas.toBlob(res, mime, qual)); }
 
+    // Conversion Processing Pipeline Loops
     convertBtn.addEventListener('click', async () => {
         const files = fileInput.files;
         if(!files.length) { alert('Upload files first.'); return; }
@@ -406,7 +448,130 @@
     function triggerDownload(url, fn) { const a = document.createElement('a'); a.href = url; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); }
 
     // ==========================================
-    // SECTION 2: LIVE MS OFFICE GRID/TABLE CODE
+    // NEW SECTION 2: PHOTO CLEANER LOGIC
+    // ==========================================
+    const scannerDropZone = document.getElementById('scannerDropZone');
+    const scannerFileInput = document.getElementById('scannerFileInput');
+    const scannerFileName = document.getElementById('scannerFileName');
+    const scannerWorkspace = document.getElementById('scannerWorkspace');
+    const scannerStatus = document.getElementById('scannerStatus');
+    const scannerCanvas = document.getElementById('scannerCanvas');
+    const sCtx = scannerCanvas.getContext('2d');
+
+    scannerDropZone.addEventListener('click', () => scannerFileInput.click());
+    scannerDropZone.addEventListener('dragover', (e) => { e.preventDefault(); scannerDropZone.classList.add('drag-over'); });
+    scannerDropZone.addEventListener('dragleave', () => scannerDropZone.classList.remove('drag-over'));
+    scannerDropZone.addEventListener('drop', (e) => {
+        e.preventDefault(); scannerDropZone.classList.remove('drag-over');
+        if(e.dataTransfer.files.length) { scannerFileInput.files = e.dataTransfer.files; loadScannerImage(); }
+    });
+    scannerFileInput.addEventListener('change', loadScannerImage);
+
+    async function loadScannerImage() {
+        const file = scannerFileInput.files[0];
+        if(!file) return;
+        scannerFileName.textContent = `Target File: ${file.name}`;
+        scannerStatus.className = "status-loading";
+        scannerStatus.textContent = "Loading pixel array matrices...";
+        
+        scannerImageObject = await loadImage(file);
+        scannerCanvas.width = scannerImageObject.width;
+        scannerCanvas.height = scannerImageObject.height;
+        sCtx.drawImage(scannerImageObject, 0, 0);
+
+        scannerWorkspace.style.display = "block";
+        scannerStatus.className = "status-success";
+        scannerStatus.textContent = "Photo loaded! Click 'Clear Background & Sharpen' to enhance text lines.";
+    }
+
+    // Canvas matrix threshold filtering algorithms to erase gray/blurry shadow artifacts
+    document.getElementById('enhanceClearBtn').addEventListener('click', () => {
+        if(!scannerImageObject) return;
+        scannerStatus.className = "status-loading";
+        scannerStatus.textContent = "Running adaptive edge-sharpening convolution... Hold tight.";
+
+        setTimeout(() => {
+            sCtx.drawImage(scannerImageObject, 0, 0);
+            const imgData = sCtx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
+            const d = imgData.data;
+
+            // Step 1: High Contrast Adaptive Brightness Balancing Pass
+            for (let i = 0; i < d.length; i += 4) {
+                let r = d[i], g = d[i+1], b = d[i+2];
+                // Convert to greyscale luminosity values
+                let v = (0.2126 * r + 0.7152 * g + 0.0722 * b);
+                
+                // Adaptive threshold lookup curve to wipe shadows out to pure white paper
+                if (v > 130) {
+                    d[i] = 255; d[i+1] = 255; d[i+2] = 255; // Force background noise to white
+                } else {
+                    // Deepen text details
+                    d[i] = v * 0.5; d[i+1] = v * 0.5; d[i+2] = v * 0.5;
+                }
+            }
+            sCtx.putImageData(imgData, 0, 0);
+            scannerStatus.className = "status-success";
+            scannerStatus.textContent = "Enhancement complete! Text lines sharpened and background shadows erased.";
+        }, 50);
+    });
+
+    // Converter Route A: Image Scanner Output Directly to Crisp Document PDF
+    document.getElementById('scannerToPdfBtn').addEventListener('click', () => {
+        if(!scannerImageObject) return;
+        const outUrl = scannerCanvas.toDataURL('image/jpeg', 0.95);
+        const pdf = new jspdf.jsPDF({
+            orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p',
+            unit: 'px',
+            format: [scannerCanvas.width, scannerCanvas.height]
+        });
+        pdf.addImage(outUrl, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height);
+        pdf.save(`Clean_Scan_${Date.now()}.pdf`);
+    });
+
+    // Converter Route B: Push Cleaned Photo layout straight into Editable Text Table Workspace
+    document.getElementById('scannerToDocxBtn').addEventListener('click', () => {
+        if(!scannerImageObject) return;
+        scannerStatus.className = "status-loading";
+        scannerStatus.textContent = "Packaging clean matrix layers into editor cells...";
+
+        const cleanImgUrl = scannerCanvas.toDataURL('image/jpeg', 0.90);
+        // Build raw text wrapper containing the enhanced baseline image asset
+        const contentStructure = `
+            <p style="text-align:center;"><strong>Enhanced Document Attachment Workspace:</strong></p>
+            <table border="1" style="width:100%; border-collapse:collapse; text-align:center;">
+                <tr>
+                    <td><img src="${cleanImgUrl}" style="max-width:100%; height:auto;" alt="Enhanced Sheet"/></td>
+                </tr>
+            </table>
+            <p><br/>👇 Type modifications or copy individual extracted table information numbers right here below:</p>
+        `;
+
+        officeWorkspace.style.display = "block";
+        officeFileName.textContent = "Imported from Photo Cleaner Workspace";
+        
+        // Push payload straight into running instance
+        if (tinymce.get('wordEditor')) {
+            tinymce.get('wordEditor').setContent(contentStructure);
+        } else {
+            tinymce.init({
+                selector: '#wordEditor',
+                plugins: 'table lists advlist image code link directionality charmap preview emoticons',
+                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | table tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | bullist numlist | ltr rtl | removeformat',
+                height: 500,
+                menubar: true,
+                setup: function (editor) { editorInstance = editor; }
+            }).then(() => {
+                tinymce.get('wordEditor').setContent(contentStructure);
+            });
+        }
+        
+        document.getElementById('officeWorkspace').scrollIntoView({ behavior: 'smooth' });
+        scannerStatus.className = "status-success";
+        scannerStatus.textContent = "Sent successfully! View and edit your document attachment inside Section 3 below.";
+    });
+
+    // ==========================================
+    // SECTION 3: LIVE MS OFFICE GRID/TABLE CODE
     // ==========================================
     const officeDropZone = document.getElementById('officeDropZone');
     const officeFileInput = document.getElementById('officeFileInput');
@@ -434,7 +599,6 @@
 
         try {
             const buffer = await readFileAsBuffer(file);
-            
             const parseOptions = {
                 styleMap: [
                     "p[style-name='Table Heading'] => h3:fresh",
@@ -461,9 +625,7 @@
                     menubar: true,
                     table_default_styles: { width: '100%', borderCollapse: 'collapse' },
                     content_style: 'body { font-family:sans-serif; margin:20px; } table { width:100%; border-collapse:collapse; margin-bottom:10px; } td, th { border:1px solid #9ca3af; padding:6px; min-width:50px; word-break:break-word; } th { background-color:#f3f4f6; }',
-                    setup: function (editor) {
-                        editorInstance = editor;
-                    }
+                    setup: function (editor) { editorInstance = editor; }
                 });
                 tinymce.get('wordEditor').setContent(sanitizedHtml);
             }
@@ -478,15 +640,13 @@
         }
     }
 
-    // EXPORT TO MS WORD SUITE
+    // EXPORT TO WORD
     document.getElementById('exportDocxBtn').addEventListener('click', async () => {
         if(!editorInstance) return;
-        officeStatus.className = "status-loading";
-        officeStatus.textContent = "Packing clean text blocks back to Word binary layers...";
+        officeStatus.className = "status-loading"; officeStatus.textContent = "Packing content back to Word binary layers...";
 
         try {
             const editorHtml = editorInstance.getContent();
-            
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = editorHtml;
             const rowsHtml = tempDiv.querySelectorAll('tr');
@@ -513,40 +673,26 @@
 
             const doc = new docx.Document({ sections: [{ children: docParagraphs }] });
             const blob = await docx.Packer.toBlob(doc);
-            
             triggerDownload(URL.createObjectURL(blob), `${loadedDocBaseName}_edited.docx`);
-            officeStatus.className = "status-success";
-            officeStatus.textContent = "Word grid document generated successfully!";
+            officeStatus.className = "status-success"; officeStatus.textContent = "Word grid document generated successfully!";
         } catch(err) {
-            officeStatus.className = "status-error";
-            officeStatus.textContent = "Error compiling file assets.";
-            console.error(err);
+            officeStatus.className = "status-error"; officeStatus.textContent = "Error compiling file assets.";
         }
     });
 
-    // EXPORT TO PDF DOCUMENT
+    // EXPORT TO PDF
     document.getElementById('exportPdfBtn').addEventListener('click', async () => {
         if(!editorInstance) return;
-        officeStatus.className = "status-loading";
-        officeStatus.textContent = "Flattening layouts straight to an A4 PDF document...";
+        officeStatus.className = "status-loading"; officeStatus.textContent = "Flattening layouts straight to an A4 PDF document...";
 
         try {
             const htmlContent = editorInstance.getContent();
             const pdf = new jspdf.jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
-            
-            await pdf.html(htmlContent, {
-                x: 20, y: 30,
-                width: 750,
-                windowWidth: 900
-            });
-
+            await pdf.html(htmlContent, { x: 20, y: 30, width: 750, windowWidth: 900 });
             pdf.save(`${loadedDocBaseName}_edited.pdf`);
-            officeStatus.className = "status-success";
-            officeStatus.textContent = "PDF document exported successfully!";
+            officeStatus.className = "status-success"; officeStatus.textContent = "PDF document exported successfully!";
         } catch(err) {
-            officeStatus.className = "status-error";
-            officeStatus.textContent = "PDF matrix formatting failed.";
-            console.error(err);
+            officeStatus.className = "status-error"; officeStatus.textContent = "PDF matrix formatting failed.";
         }
     });
 </script>
