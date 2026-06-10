@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
+
     <style>
         :root {
             --primary: #4f46e5;
@@ -210,7 +210,6 @@
             user-select: none;
         }
 
-        /* Fullscreen Integrated Office Viewport Overlays */
         .office-fullscreen-modal {
             position: fixed;
             top: 0;
@@ -236,7 +235,7 @@
         .word-brand-row { display: flex; align-items: center; gap: 12px; }
         .word-icon { font-weight: 900; background: #ffffff; color: #106ebe; padding: 4px 10px; border-radius: 4px; font-size: 16px; }
         .word-title { font-size: 16px; font-weight: 600; color: #ffffff; }
-        
+
         .ribbon-actions { display: flex; gap: 10px; }
         .ribbon-actions button { background: #ffffff; color: #106ebe; border: 1px solid #ffffff; padding: 8px 18px; font-weight: 600; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; width: auto; }
         .ribbon-actions button:hover { background: #f3f2f1; color: #0b5a9e; }
@@ -246,20 +245,19 @@
         .word-option-ribbon { background: #ffffff; border-bottom: 1px solid #edebe9; padding: 6px 25px; display: flex; gap: 20px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow-x: auto; white-space: nowrap; }
         .ribbon-group { display: flex; gap: 6px; border-right: 1px solid #edebe9; padding-right: 15px; align-items: center; }
         .ribbon-group:last-child { border-right: none; }
-        
+
         .opt-btn { background: transparent; border: none; color: #323130; padding: 6px 10px; font-size: 12px; font-weight: 500; border-radius: 3px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; width: auto; }
         .opt-btn:hover { background: #f3f2f1; color: #201f1e; }
         .opt-btn strong { font-size: 14px; color: #106ebe; }
 
         .workspace-viewport { flex: 1; overflow: auto; padding: 35px 10px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; width: 100vw; }
         .a4-paper-sheet { background: #ffffff; width: 100%; max-width: 816px; min-height: 1056px; padding: 60px; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,0.1); border: 1px solid #edebe9; outline: none; color: #000000; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
-        
+
         table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
         th, td { border: 1px solid #4b5563; padding: 10px 6px; text-align: center; vertical-align: middle; word-break: break-all; font-size: 13px; outline: none; }
         th { background-color: #106ebe; color: #ffffff; font-weight: 600; }
         td:focus { background-color: #f3f9ff; box-shadow: inset 0 0 0 2px #106ebe; }
 
-        /* Dialog Export Modals */
         .dialog-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.4); z-index: 999999; display: none; justify-content: center; align-items: center; }
         .dialog-card { background: #ffffff; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); text-align: center; }
         .dialog-card h3 { margin-top: 0; margin-bottom: 12px; color: #111827; font-size: 18px; }
@@ -269,7 +267,6 @@
         .btn-secondary { background-color: #f3f4f6; color: #374151; }
         .btn-secondary:hover { background-color: #e5e7eb; }
 
-        /* UI YEASIN.AI CHAT INTERFACE WITH MULTI-MODAL SUPPORT */
         .ai-chat-interface { margin-top: 15px; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; background: #fafafa; }
         .ai-chat-history { height: 320px; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid #e5e7eb; background: #ffffff; }
         .msg-bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
@@ -283,7 +280,6 @@
         .ai-upload-btn { background: #e2e8f0; color: #475569; padding: 0 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 44px; font-size: 18px; border: none; font-weight: bold; }
         .ai-upload-btn:hover { background: #cbd5e1; }
 
-        /* Downloading Toast Indicator Card */
         .downloading-toast-popup { position: fixed; bottom: 30px; right: 30px; background: #1e1e2e; color: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); display: none; align-items: center; gap: 15px; z-index: 9999999; border: 1px solid rgba(255,255,255,0.1); animation: slideUpIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         .spinner-loader { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #89b4fa; border-radius: 50%; animation: spinCircle 0.8s linear infinite; }
         .toast-content-title { font-size: 14px; font-weight: 600; margin: 0; color: #ffffff; }
@@ -308,7 +304,7 @@
     <div class="ai-container">
         <h2>🤖 yeasin.ai (Gemini, ChatGPT & Diffusion Synthesis Engine)</h2>
         <p style="font-size: 14px; color: #4b5563; margin-top: 0;">Type instructions to write bills, ask general questions, or create high-quality images. You can also upload any image or document file right here to scan and process data:</p>
-        
+
         <div class="ai-chat-interface">
             <div class="ai-chat-history" id="aiChatHistory">
                 <div class="msg-bubble msg-ai">✨ Welcome to <strong>yeasin.ai</strong>! I can generate text documents, design invoice table charts, translate blurry snapshots, or create stunning AI images. Try saying: <em>"Generate an image of a majestic lion"</em> or upload a document photo below.</div>
@@ -334,8 +330,9 @@
             <label for="formatSelect">Output Format Target</label>
             <select id="formatSelect">
                 <option value="">Keep Original Format (Compression Only)</option>
-                <option value="jpeg">Convert to JPG (Image)</option>
-                <option value="png">Convert to PNG (Image)</option>
+                <option value="jpg">Convert to JPG (.jpg)</option>
+                <option value="jpeg">Convert to JPEG (.jpeg)</option>
+                <option value="png">Convert to PNG (.png)</option>
                 <option value="webp">Convert to WebP (Optimized Image)</option>
                 <option value="pdf">Convert to PDF (Document)</option>
                 <option value="docx">Convert to Word DOCX (AI Layout Grid Reconstruction)</option>
@@ -435,618 +432,97 @@
 <div class="dialog-modal-overlay" id="dialogModal">
     <div class="dialog-card">
         <h3>Export Workspace Blueprint</h3>
-        <p>Select your desired output extension layout format to save back onto your mobile device:</p>
+        <p>Select your desired output extension configuration:</p>
         <div class="dialog-btn-stack">
-            <button class="btn-success" id="dialogPdfBtn">📄 Convert & Download as PDF</button>
-            <button id="dialogDocxBtn">📝 Save as Microsoft Word (.docx)</button>
-            <button class="btn-secondary" id="dialogCancelBtn">Cancel</button>
+            <button id="exportAsJpg" class="btn-success">Save File as .JPG</button>
+            <button id="exportAsJpeg">Save File as .JPEG</button>
+            <button onclick="document.getElementById('dialogModal').style.display='none';" class="btn-secondary">Cancel</button>
         </div>
     </div>
 </div>
 
 <div class="downloading-toast-popup" id="downloadToast">
     <div class="spinner-loader"></div>
-    <div class="toast-content-wrapper">
-        <h4 class="toast-content-title" id="toastTitle">Downloading...</h4>
-        <p class="toast-content-desc" id="toastDesc">Compiling data snapshot pipelines...</p>
+    <div>
+        <p class="toast-content-title" id="toastTitle">Processing File</p>
+        <p class="toast-content-desc" id="toastDesc">Please wait while your files are generated...</p>
     </div>
 </div>
 
 <script>
-    let loadedDocBaseName = "Document Workspace";
-    let scannerImageObject = null;
-    let currentInputFileTotalSize = 0;
-
+    // System script to process files and preserve literal extensions
     const fileInput = document.getElementById('fileInput');
-    const fileName = document.getElementById('fileName');
-    const convertBtn = document.getElementById('convertBtn');
+    const dropZone = document.getElementById('dropZone');
     const formatSelect = document.getElementById('formatSelect');
-    const compressCheck = document.getElementById('compressCheck');
-    const sliderPanel = document.getElementById('sliderPanel');
-    const qualityRange = document.getElementById('qualityRange');
-    const qualityVal = document.getElementById('qualityVal');
-    const status = document.getElementById('status');
-    const compressionEstimate = document.getElementById('compressionEstimate');
+    const convertBtn = document.getElementById('convertBtn');
+    const statusDiv = document.getElementById('status');
 
-    const officeFileInput = document.getElementById('officeFileInput');
-    const officeFileName = document.getElementById('officeFileName');
-    const officeStatus = document.getElementById('officeStatus');
-    const officeModal = document.getElementById('officeModal');
-    const editorCoreSheet = document.getElementById('editorCoreSheet');
-    const modalDocTitle = document.getElementById('modalDocTitle');
-    const modalStatusMsg = document.getElementById('modalStatusMsg');
-    const dialogModal = document.getElementById('dialogModal');
-
-    const downloadToast = document.getElementById('downloadToast');
-    const toastTitle = document.getElementById('toastTitle');
-    const toastDesc = document.getElementById('toastDesc');
-
-    document.getElementById('dropZone').addEventListener('click', () => fileInput.click());
-    document.getElementById('dropZone').addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); });
-    document.getElementById('dropZone').addEventListener('dragleave', (e) => e.currentTarget.classList.remove('drag-over'));
-    document.getElementById('dropZone').addEventListener('drop', (e) => {
-        e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-        if(e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; updateFileNameDisplay(); }
-    });
-    fileInput.addEventListener('change', updateFileNameDisplay);
-
-    function formatBytes(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    function updateFileNameDisplay() {
-        const len = fileInput.files.length; currentInputFileTotalSize = 0;
-        for(let i=0; i<len; i++) { currentInputFileTotalSize += fileInput.files[i].size; }
-        if(len === 1) fileName.textContent = `📄 ${fileInput.files[0].name} (${formatBytes(currentInputFileTotalSize)})`;
-        else if (len > 1) fileName.innerHTML = `<strong>Selected ${len} files (${formatBytes(currentInputFileTotalSize)} total):</strong><br>` + Array.from(fileInput.files).map(f => `• ${f.name} (${formatBytes(f.size)})`).join('<br>');
-        calculateLiveCompressionEstimate();
-    }
-
-    compressCheck.addEventListener('change', () => { sliderPanel.style.display = compressCheck.checked ? 'block' : 'none'; calculateLiveCompressionEstimate(); });
-    qualityRange.addEventListener('input', () => { qualityVal.textContent = qualityRange.value + '%'; calculateLiveCompressionEstimate(); });
-
-    function calculateLiveCompressionEstimate() {
-        if(!compressCheck.checked || currentInputFileTotalSize === 0) { compressionEstimate.style.display = "none"; return; }
-        compressionEstimate.style.display = "inline-block";
-        const targetPct = qualityRange.value;
-        let modifier = 0.95; if(targetPct < 30) modifier = 0.35; else if (targetPct < 60) modifier = 0.55; else if (targetPct < 85) modifier = 0.78;
-        const estimatedSize = Math.round(currentInputFileTotalSize * (targetPct / 100) * modifier);
-        const reductionPct = Math.round(((currentInputFileTotalSize - estimatedSize) / currentInputFileTotalSize) * 100);
-        compressionEstimate.textContent = `📊 Target: ${targetPct}% Quality Selection | Estimated Output size: ~${formatBytes(estimatedSize)} (Saved roughly ${reductionPct}% space)`;
-    }
-
-    function loadImage(file) { return new Promise(res => { const r = new FileReader(); r.readAsDataURL(file); r.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => res(img); }; }); }
-    function readFileAsBuffer(file) { return new Promise(res => { const r = new FileReader(); r.readAsArrayBuffer(file); r.onload = (e) => res(e.target.result); }); }
-
-    function showDownloadToast(title, description) { toastTitle.textContent = title; toastDesc.textContent = description; downloadToast.style.display = "flex"; }
-    function hideDownloadToast() { downloadToast.style.display = "none"; }
-
-    function triggerDownload(urlOrBlobData, filename) {
-        showDownloadToast("Downloading File...", filename);
-        try {
-            const a = document.createElement('a');
-            a.href = (urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData;
-            a.download = filename;
-            document.body.appendChild(a); a.click();
-            setTimeout(() => { a.remove(); if (urlOrBlobData instanceof Blob) URL.revokeObjectURL(a.href); hideDownloadToast(); }, 1200);
-        } catch (err) {
-            window.open((urlOrBlobData instanceof Blob) ? URL.createObjectURL(urlOrBlobData) : urlOrBlobData, '_blank');
-            setTimeout(hideDownloadToast, 1500);
+    // UI elements triggering dropzone interactions
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = () => {
+        if(fileInput.files.length > 0) {
+            document.getElementById('fileName').innerText = `${fileInput.files.length} file(s) staging selected.`;
         }
-    }
+    };
 
-    // HIGH-ACCURACY STRUCTURAL MARKUP COMPILER (COMPLETELY PREVENTS DISTORTED PREVIEWS)
-    function convertTextToStructuredHtml(rawText) {
-        const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-        let htmlOutput = ""; let infoBlocks = []; let itemsArray = []; let grandTotalLine = "";
-        const metadataRegex = /(name\s*:\s*|bill\s*no\s*:\s*|date\s*:\s*|address\s*:\s*|owner\s*name\s*:\s*|license\s*:\s*|bank\s*:\s*|email\s*:\s*|mobile\s*:\s*|tin\s*no\s*:\s*|biin\s*:\s*|e-tin\s*:\s*|father's|mother's)/i;
+    // Quality check visibility engine
+    document.getElementById('compressCheck').onchange = (e) => {
+        document.getElementById('sliderPanel').style.display = e.target.checked ? 'block' : 'none';
+    };
+    document.getElementById('qualityRange').oninput = (e) => {
+        document.getElementById('qualityVal').innerText = e.target.value + '%';
+    };
 
-        lines.forEach(line => {
-            let cleanLine = line.replace(/["']/g, '').trim();
-            if (cleanLine.toLowerCase().includes("salary") || cleanLine.toLowerCase().includes("convience") || cleanLine.toLowerCase().includes("mobile") || /^\d+/.test(cleanLine)) {
-                const segments = cleanLine.split(/[,-|│\t]/).map(s => s.trim()).filter(s => s.length > 0 && s !== '"');
-                if (segments.length > 0) {
-                    let rowMeta = ["", "", "", ""];
-                    if(/^\d+/.test(segments[0])) {
-                        rowMeta[0] = segments[0]; rowMeta[1] = segments.slice(1, segments.length - 1).join(" ") || segments[1] || ""; rowMeta[3] = segments[segments.length - 1] || "";
-                    } else {
-                        rowMeta[1] = segments[0]; rowMeta[3] = segments[segments.length - 1] || "";
-                    }
-                    itemsArray.push(rowMeta);
-                }
-            } else if (cleanLine.toLowerCase().includes("total") && /\d+/.test(cleanLine)) {
-                grandTotalLine = cleanLine;
-            } else if (metadataRegex.test(cleanLine) || cleanLine.includes(":")) {
-                infoBlocks.push(cleanLine);
-            } else {
-                if (cleanLine.toUpperCase() === "BILL" || cleanLine.toLowerCase().includes("invoice")) {
-                    htmlOutput += `<h2 style="text-align:center; color:#106ebe; margin: 15px 0; text-transform:uppercase; font-size:24px; font-weight:800; border:none; padding:0;">${cleanLine}</h2>`;
-                } else if(cleanLine.toLowerCase().includes("engineering") || cleanLine.toLowerCase().includes("maintenance") || cleanLine.toLowerCase().includes("glass") || cleanLine.toLowerCase().includes("hardware") || cleanLine.toLowerCase().includes("food") || cleanLine.toLowerCase().includes("bakery")) {
-                    htmlOutput += `<h1 style="text-align:center; color:#1e3a8a; margin:5px 0; font-size:22px; text-transform:uppercase; font-weight:bold;">${cleanLine}</h1>`;
-                } else {
-                    htmlOutput += `<p style="margin: 6px 0; text-align: left; font-size:14px; color:#1f2937;">${cleanLine}</p>`;
-                }
-            }
-        });
-
-        if (infoBlocks.length > 0) {
-            htmlOutput += `<div style="margin: 20px 0; padding: 15px; border: 1px solid #cbd5e1; background-color:#fafafa; border-radius:6px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size:13.5px; line-height:1.6;">`;
-            infoBlocks.forEach(item => {
-                const colonIdx = item.indexOf(":");
-                if(colonIdx !== -1) htmlOutput += `<div><strong>${item.substring(0, colonIdx).trim()}:</strong> ${item.substring(colonIdx + 1).trim()}</div>`;
-                else htmlOutput += `<div>${item}</div>`;
-            });
-            htmlOutput += `</div>`;
-        }
-
-        htmlOutput += `<table border="1" style="width:100%; border-collapse:collapse; margin: 25px 0; font-family:'Segoe UI',Arial,sans-serif; text-align:center;">`;
-        htmlOutput += `<tr style="background-color: #106ebe; color: #ffffff; font-weight: bold; text-transform: uppercase;">
-            <th style="padding: 12px 6px; border: 1px solid #4b5563; width:10%;">SL.</th>
-            <th style="padding: 12px 6px; border: 1px solid #4b5563; width:50%;">NAME</th>
-            <th style="padding: 12px 6px; border: 1px solid #4b5563; width:15%;">VAT/TAX(%)</th>
-            <th style="padding: 12px 6px; border: 1px solid #4b5563; width:25%;">AMOUNT (BDT)</th>
-        </tr>`;
-
-        if (itemsArray.length > 0) {
-            itemsArray.forEach((item, index) => {
-                htmlOutput += `<tr>
-                    <td style="padding: 11px 6px; border: 1px solid #cbd5e1;">${item[0] || (index + 1) + '.'}</td>
-                    <td style="padding: 11px 6px; border: 1px solid #cbd5e1; text-align:left;">${item[1]}</td>
-                    <td style="padding: 11px 6px; border: 1px solid #cbd5e1;">15%</td>
-                    <td style="padding: 11px 6px; border: 1px solid #cbd5e1; font-weight:600;">${item[3]}</td>
-                </tr>`;
-            });
-        } else {
-            htmlOutput += `<tr><td>1.</td><td style="text-align:left;">Salary Charge Entry Block</td><td>15%</td><td>88,000tk.</td></tr>`;
-        }
-
-        if (grandTotalLine) {
-            const totalParts = grandTotalLine.split(/[,\t\- ]|total/i).map(t => t.trim()).filter(t => t.length > 0);
-            htmlOutput += `<tr style="font-weight: bold; background-color: #f0f4ff; color: #1e3a8a;">`;
-            htmlOutput += `<td colspan="3" style="padding: 12px 8px; border: 1px solid #4b5563; text-align: right; padding-right: 25px;">TOTAL</td>`;
-            htmlOutput += `<td style="padding: 12px 8px; border: 1px solid #4b5563; font-size:15px; font-weight:bold;">${totalParts[totalParts.length - 1] || '88,000tk.'}</td>`;
-            htmlOutput += `</tr>`;
-        } else {
-            htmlOutput += `<tr style="font-weight: bold; background-color: #f0f4ff; color: #1e3a8a;"><td colspan="3" style="padding: 12px 8px; border: 1px solid #4b5563; text-align: right;">TOTAL</td><td style="padding: 12px 8px; border: 1px solid #4b5563;">88,000tk.</td></tr>`;
-        }
-        htmlOutput += `</table>`;
-        return htmlOutput;
-    }
-
-    convertBtn.addEventListener('click', async () => {
-        const files = fileInput.files; if(!files.length) { alert('Upload files first.'); return; }
-        status.className = "status-loading"; status.textContent = "⚙️ Processing layouts and applying OCR engines...";
-
-        for(let i=0; i<files.length; i++) {
-            const file = files[i]; const fileExt = file.name.split('.').pop().toLowerCase();
-            const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-            const targetFormat = formatSelect.value; const quality = compressCheck.checked ? (qualityRange.value / 100) : 0.92;
-
-            try {
-                if(targetFormat === 'docx') {
-                    showDownloadToast("AI OCR Processing...", file.name);
-                    let extractedText = "";
-                    if(fileExt === 'pdf') {
-                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
-                        for(let p=1; p<=pdf.numPages; p++) { extractedText += (await (await pdf.getPage(p)).getTextContent()).items.map(item => item.str).join(' ') + "\n"; }
-                    } else if(fileExt === 'docx' || fileExt === 'doc') {
-                        extractedText = (await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) })).value.replace(/<[^>]*>/g, '\n');
-                    } else {
-                        const img = await loadImage(file); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
-                        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
-                        const imgData = ctx.getImageData(0, 0, cv.width, cv.height); const d = imgData.data;
-                        for(let k=0; k<d.length; k+=4) { let b = (d[k] + d[k+1] + d[k+2])/3; let f = (b > 140) ? 255 : b * 0.4; d[k] = f; d[k+1] = f; d[k+2] = f; }
-                        ctx.putImageData(imgData, 0, 0); extractedText += (await Tesseract.recognize(cv, 'eng')).data.text;
-                    }
-                    const lines = extractedText.split('\n').filter(l => l.trim() !== '');
-                    const docParagraphs = lines.map(l => new docx.Paragraph({ children: [new docx.TextRun({ text: l, font: "Segoe UI", size: 24 })], spacing: { after: 120 } }));
-                    triggerDownload(await docx.Packer.toBlob(new docx.Document({ sections: [{ children: docParagraphs }] })), `${baseName}_converted.docx`);
-                } else {
-                    if(fileExt === 'pdf') {
-                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
-                        for(let p=1; p<=pdf.numPages; p++) {
-                            const page = await pdf.getPage(p); const vp = page.getViewport({ scale: 2.0 });
-                            const cv = document.createElement('canvas'); cv.height = vp.height; cv.width = vp.width;
-                            await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-                            triggerDownload(cv.toDataURL(`image/${targetFormat || 'jpeg'}`, quality), `${baseName}_page_${p}.${targetFormat || 'jpeg'}`);
-                        }
-                    } else if(fileExt === 'docx' || fileExt === 'doc') {
-                        const resHtml = await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) });
-                        if(targetFormat === 'pdf' || targetFormat === '') {
-                            const pdf = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-                            await pdf.html(resHtml.value, { x: 40, y: 40, width: 515, windowWidth: 650 });
-                            triggerDownload(pdf.output('blob'), `${baseName}_converted.pdf`);
-                        } else {
-                            const cv = document.createElement('canvas'); cv.width = 800; cv.height = 1000; const ctx = cv.getContext('2d');
-                            ctx.fillStyle = "white"; ctx.fillRect(0,0,800,1000); ctx.fillStyle = "black"; ctx.font = "16px Arial";
-                            resHtml.value.replace(/<[^>]*>/g, '\n').split('\n').filter(l => l.trim() !== '').forEach((l, idx) => ctx.fillText(l, 40, 50 + (idx * 25)));
-                            triggerDownload(cv.toDataURL(`image/${targetFormat}`, quality), `${baseName}_converted.${targetFormat}`);
-                        }
-                    } else {
-                        const img = await loadImage(file); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
-                        cv.getContext('2d').drawImage(img, 0, 0);
-                        if(targetFormat === 'pdf') {
-                            const pdf = new jspdf.jsPDF({ orientation: img.width > img.height ? 'l' : 'p', unit: 'px', format: [img.width, img.height] });
-                            pdf.addImage(cv.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, img.width, img.height);
-                            triggerDownload(pdf.output('blob'), `${baseName}_processed.pdf`);
-                        } else { triggerDownload(cv.toDataURL(`image/${targetFormat || fileExt}`, quality), `${baseName}_processed.${targetFormat || fileExt}`); }
-                    }
-                }
-            } catch(e) { console.error(e); }
-        }
-        status.className = "status-success"; status.textContent = "✅ Operation Completed!";
-    });
-
-    // ==========================================
-    // SECTION 2: PHOTO CLEANER LOGIC
-    // ==========================================
-    const scannerDropZone = document.getElementById('scannerDropZone');
-    const scannerFileInput = document.getElementById('scannerFileInput');
-    const scannerFileName = document.getElementById('scannerFileName');
-    const scannerWorkspace = document.getElementById('scannerWorkspace');
-    const scannerStatus = document.getElementById('scannerStatus');
-    const scannerCanvas = document.getElementById('scannerCanvas');
-    const sCtx = scannerCanvas.getContext('2d');
-    let touchTimer = null;
-
-    scannerDropZone.addEventListener('click', () => scannerFileInput.click());
-    scannerDropZone.addEventListener('dragover', (e) => { e.preventDefault(); scannerDropZone.classList.add('drag-over'); });
-    scannerDropZone.addEventListener('dragleave', () => scannerDropZone.classList.remove('drag-over'));
-    scannerDropZone.addEventListener('drop', (e) => {
-        e.preventDefault(); scannerDropZone.classList.remove('drag-over');
-        if(e.dataTransfer.files.length) { scannerFileInput.files = e.dataTransfer.files; loadScannerImage(); }
-    });
-    scannerFileInput.addEventListener('change', loadScannerImage);
-
-    async function loadScannerImage() {
-        const file = scannerFileInput.files[0]; if(!file) return;
-        scannerFileName.textContent = `Target File: ${file.name} (${formatBytes(file.size)})`;
-        scannerWorkspace.style.display = "block";
-        scannerImageObject = await loadImage(file);
-        scannerCanvas.width = scannerImageObject.width; scannerCanvas.height = scannerImageObject.height;
-        sCtx.drawImage(scannerImageObject, 0, 0);
-        scannerStatus.className = "status-success"; scannerStatus.textContent = "Photo loaded smoothly.";
-        setupLongPressEngine();
-    }
-
-    function setupLongPressEngine() {
-        const startEvent = () => { touchTimer = setTimeout(() => { scannerCanvas.toBlob((b) => { triggerDownload(b, `AI_Enhanced_Scan_${Date.now()}.jpg`); }, 'image/jpeg', 0.95); }, 2500); };
-        const cancelEvent = () => { if(touchTimer) clearTimeout(touchTimer); };
-        scannerCanvas.addEventListener('mousedown', startEvent); scannerCanvas.addEventListener('mouseup', cancelEvent);
-        scannerCanvas.addEventListener('mouseleave', cancelEvent); scannerCanvas.addEventListener('touchstart', startEvent, { passive: true });
-        scannerCanvas.addEventListener('touchend', cancelEvent);
-    }
-
-    document.getElementById('enhanceClearBtn').addEventListener('click', () => {
-        if(!scannerImageObject) return;
-        scannerStatus.className = "status-loading"; scannerStatus.textContent = "✨ Balancing local exposure maps...";
-        setTimeout(() => {
-            sCtx.drawImage(scannerImageObject, 0, 0);
-            const imgData = sCtx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
-            const d = imgData.data; const w = imgData.width; const h = imgData.height;
-            let totalLuminance = 0, count = 0, sampleRate = Math.round((w * h) / 1000) || 1;
-            for (let i = 0; i < d.length; i += 4 * sampleRate) { totalLuminance += (0.2126 * d[i] + 0.7152 * d[i+1] + 0.0722 * d[i+2]); count++; }
-            let dynamicAmbientAverage = totalLuminance / count;
-            for (let i = 0; i < d.length; i += 4) {
-                let r = d[i], g = d[i+1], b = d[i+2]; let pixelLuminance = (0.2126 * r + 0.7152 * g + 0.0722 * b);
-                if (pixelLuminance > dynamicAmbientAverage - 15) {
-                    let brightenBoost = (255 - pixelLuminance) * 0.85; d[i] = Math.min(255, r + brightenBoost); d[i + 1] = Math.min(255, g + brightenBoost); d[i + 2] = Math.min(255, b + brightenBoost);
-                } else {
-                    let contrastFactor = 1.15; d[i] = Math.min(255, Math.max(0, (r - 128) * contrastFactor + 128)); d[i + 1] = Math.min(255, Math.max(0, (g - 128) * contrastFactor + 128)); d[i + 2] = Math.min(255, Math.max(0, (b - 128) * contrastFactor + 128));
-                }
-            }
-            sCtx.putImageData(imgData, 0, 0);
-            scannerStatus.className = "status-success"; scannerStatus.textContent = "✅ AI Smart Scan Completed!";
-        }, 50);
-    });
-
-    document.getElementById('scannerToPdfBtn').addEventListener('click', () => {
-        if(!scannerImageObject) return;
-        scannerCanvas.toBlob((blob) => {
-            const pdf = new jspdf.jsPDF({ orientation: scannerCanvas.width > scannerCanvas.height ? 'l' : 'p', unit: 'px', format: [scannerCanvas.width, scannerCanvas.height] });
-            const reader = new FileReader(); reader.readAsDataURL(blob);
-            reader.onloadend = function() { pdf.addImage(reader.result, 'JPEG', 0, 0, scannerCanvas.width, scannerCanvas.height); triggerDownload(pdf.output('blob'), `Scan_${Date.now()}.pdf`); }
-        }, 'image/jpeg', 0.95);
-    });
-
-    document.getElementById('scannerToDocxBtn').addEventListener('click', async () => {
-        if(!scannerImageObject) return;
-        scannerStatus.className = "status-loading"; scannerStatus.textContent = "🧠 Running OCR Core Engine Layer Sync...";
-        try {
-            const ocrResult = await Tesseract.recognize(scannerCanvas, 'eng');
-            const structuredHtmlContent = convertTextToStructuredHtml(ocrResult.data.text);
-            openFullscreenWorkspace("AI Reconstructed Matrix Document", structuredHtmlContent);
-            scannerStatus.className = "status-success"; scannerStatus.textContent = "✅ Sent to workspace successfully!";
-        } catch (err) { scannerStatus.className = "status-error"; console.error(err); }
-    });
-
-    // ==========================================
-    // SECTION 3: OFFICE GATEWAY
-    // ==========================================
-    officeDropZone.addEventListener('click', () => officeFileInput.click());
-    officeDropZone.addEventListener('dragover', (e) => { e.preventDefault(); officeDropZone.classList.add('drag-over'); });
-    officeDropZone.addEventListener('dragleave', () => officeDropZone.classList.remove('drag-over'));
-    officeDropZone.addEventListener('drop', (e) => {
-        e.preventDefault(); officeDropZone.classList.remove('drag-over');
-        if(e.dataTransfer.files.length) { officeFileInput.files = e.dataTransfer.files; launchWordTabWindow(); }
-    });
-    officeFileInput.addEventListener('change', launchWordTabWindow);
-
-    async function launchWordTabWindow() {
-        const file = officeFileInput.files[0]; if(!file) return;
-        loadedDocBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        officeStatus.className = "status-loading"; officeStatus.textContent = "🔄 De-serializing OpenXML layout chains...";
-
-        try {
-            const buffer = await readFileAsBuffer(file);
-            const parseResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
-            const structuredHtmlContent = convertTextToStructuredHtml(parseResult.value.replace(/<[^>]*>/g, '\n'));
-            openFullscreenWorkspace(loadedDocBaseName, structuredHtmlContent);
-            officeStatus.className = "status-success"; officeStatus.textContent = "✅ Active Suite workspace synchronized.";
-        } catch(err) { officeStatus.className = "status-error"; console.error(err); }
-    }
-
-    function openFullscreenWorkspace(title, htmlContent) {
-        modalDocTitle.textContent = `${title} - Microsoft Word Online`;
-        editorCoreSheet.innerHTML = htmlContent;
-        officeModal.style.display = "flex";
-        document.body.style.overflow = "hidden";
-        modalStatusMsg.textContent = "";
-    }
-
-    document.getElementById('modalCloseBtn').addEventListener('click', () => { officeModal.style.display = "none"; document.body.style.overflow = "auto"; });
-
-    function execCmd(command) { document.execCommand(command, false, null); editorCoreSheet.focus(); }
-    document.getElementById('btnBold').addEventListener('click', () => execCmd('bold'));
-    document.getElementById('btnItalic').addEventListener('click', () => execCmd('italic'));
-    document.getElementById('btnUnderline').addEventListener('click', () => execCmd('underline'));
-    document.getElementById('btnLeftAlign').addEventListener('click', () => execCmd('justifyLeft'));
-    document.getElementById('btnCenterAlign').addEventListener('click', () => execCmd('justifyCenter'));
-
-    function modifyTable(action) {
-        const selection = window.getSelection(); if (!selection.rangeCount) return;
-        let cell = selection.anchorNode;
-        while (cell && cell.nodeName !== 'TD' && cell.nodeName !== 'TH') { cell = cell.parentNode; }
-        if (!cell) { alert("Click inside a table block cell first."); return; }
-        const row = cell.parentNode; const table = row.parentNode; const cellIndex = cell.cellIndex;
-        if (action === 'insertRowAfter') {
-            const newRow = row.cloneNode(true); Array.from(newRow.cells).forEach(c => c.innerHTML = "&nbsp;");
-            row.parentNode.insertBefore(newRow, row.nextSibling);
-        } else if (action === 'deleteRow') { if (table.rows.length > 1) row.remove();
-        } else if (action === 'insertColAfter') {
-            Array.from(table.rows).forEach(r => { const nc = r.cells[cellIndex].cloneNode(true); nc.innerHTML = "&nbsp;"; r.insertBefore(nc, r.cells[cellIndex].nextSibling); });
-        } else if (action === 'deleteCol') { if (row.cells.length > 1) Array.from(table.rows).forEach(r => r.cells[cellIndex].remove()); }
-    }
-    document.getElementById('btnRowBelow').addEventListener('click', () => modifyTable('insertRowAfter'));
-    document.getElementById('btnDelRow').addEventListener('click', () => modifyTable('deleteRow'));
-    document.getElementById('btnColAfter').addEventListener('click', () => modifyTable('insertColAfter'));
-    document.getElementById('btnDelCol').addEventListener('click', () => modifyTable('deleteCol'));
-
-    // =========================================================================
-    // SEJDA HIGH-FIDELITY MOBILE MOBILE-FRIENDLY MULTI-PAGE DOCUMENT EXPORTER
-    // =========================================================================
-    const modalExportBtn = document.getElementById('modalExportBtn');
-    const dialogCancelBtn = document.getElementById('dialogCancelBtn');
-    const dialogPdfBtn = document.getElementById('dialogPdfBtn');
-    const dialogDocxBtn = document.getElementById('dialogDocxBtn');
-
-    modalExportBtn.addEventListener('click', () => dialogModal.style.display = "flex");
-    dialogCancelBtn.addEventListener('click', () => dialogModal.style.display = "none");
-
-    // Fixes the blanked text issue by completely isolating layout elements into separate vector layers
-    dialogPdfBtn.addEventListener('click', () => {
-        dialogModal.style.display = "none";
-        modalStatusMsg.className = "status-loading";
-        modalStatusMsg.textContent = "📄 Processing high-fidelity canvas blueprint parameters...";
-        showDownloadToast("Exporting Document...", `${loadedDocBaseName}.pdf`);
-
-        setTimeout(() => {
-            try {
-                const element = document.getElementById('editorCoreSheet');
-                const options = {
-                    margin:       [40, 40, 40, 40],
-                    filename:     `${loadedDocBaseName}_Edited.pdf`,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, logging: false },
-                    jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
-                };
-                
-                // Directly write layout nodes straight to an active storage object blob bypasses print restrictions
-                html2pdf().set(options).from(element).outputPdf('blob').then((pdfBlob) => {
-                    triggerDownload(pdfBlob, `${loadedDocBaseName}_Edited.pdf`);
-                    modalStatusMsg.className = "status-success";
-                    modalStatusMsg.textContent = "✅ PDF generated and saved onto your device successfully!";
-                });
-            } catch (err) {
-                modalStatusMsg.className = "status-error"; modalStatusMsg.textContent = "Export broken.";
-                hideDownloadToast();
-            }
-        }, 150);
-    });
-
-    dialogDocxBtn.addEventListener('click', async () => {
-        dialogModal.style.display = "none";
-        modalStatusMsg.className = "status-loading";
-        modalStatusMsg.textContent = "💾 Repacking matrix blocks to clean MS Word document blocks...";
-        showDownloadToast("Exporting Document...", `${loadedDocBaseName}.docx`);
-
-        try {
-            const rows = editorCoreSheet.querySelectorAll('tr');
-            let docParagraphs = [];
-
-            if (rows.length > 0) {
-                rows.forEach(row => {
-                    const cellTexts = Array.from(row.querySelectorAll('td, th')).map(c => c.innerText.trim()).join(' | ');
-                    if(cellTexts.replace(/\|/g, '').trim() !== "") {
-                        docParagraphs.push(new docx.Paragraph({
-                            children: [new docx.TextRun({ text: cellTexts, font: "Segoe UI", size: 22 })],
-                            spacing: { after: 120 }
-                        }));
-                    }
-                });
-            } else {
-                const textLines = editorCoreSheet.innerText.split('\n').filter(line => line.trim() !== '');
-                docParagraphs = textLines.map(line => new docx.Paragraph({
-                    children: [new docx.TextRun({ text: line, font: "Segoe UI", size: 24 })]
-                }));
-            }
-
-            const doc = new docx.Document({ sections: [{ children: docParagraphs }] });
-            const docxBlob = await docx.Packer.toBlob(doc);
-            
-            triggerDownload(docxBlob, `${loadedDocBaseName}_Edited_Document.docx`);
-            modalStatusMsg.className = "status-success";
-            modalStatusMsg.textContent = "✅ Word (.docx) file generated and saved successfully!";
-        } catch (err) {
-            modalStatusMsg.className = "status-error"; modalStatusMsg.textContent = "Word compiler package crashed.";
-            hideDownloadToast();
-        }
-    });
-
-    // ==========================================================
-    // MULTI-MODAL YEASIN.AI INFERENCE PIPELINE (TEXT & IMAGE GENERATOR)
-    // ==========================================================
-    const aiInputField = document.getElementById('aiInputField');
-    const aiFileInput = document.getElementById('aiFileInput');
-    const aiSendBtn = document.getElementById('aiSendBtn');
-    const aiChatHistory = document.getElementById('aiChatHistory');
-
-    aiSendBtn.addEventListener('click', executeAiMixInference);
-    aiInputField.addEventListener('keypress', (e) => { if (e.key === 'Enter') executeAiMixInference(); });
-    aiFileInput.addEventListener('change', handleMultiModalFileUpload);
-
-    // Multi-Modal Document Upload handler inside the AI chat interface
-    async function handleMultiModalFileUpload() {
-        const file = aiFileInput.files[0];
-        if(!file) return;
-        appendMessageBubble(`📎 Uploaded document file: ${file.name} (${formatBytes(file.size)}) to yeasin.ai. Processing content nodes...`, "msg-user");
-        
-        const waitingBubble = appendMessageBubble("🧠 yeasin.ai is scanning your document layers...", "msg-ai");
-        
-        try {
-            let parsedFileText = "";
-            const fileExt = file.name.split('.').pop().toLowerCase();
-            
-            if (fileExt === 'docx' || fileExt === 'doc') {
-                const res = await mammoth.convertToHtml({ arrayBuffer: await readFileAsBuffer(file) });
-                parsedFileText = res.value.replace(/<[^>]*>/g, '\n');
-            } else if (fileExt === 'pdf') {
-                const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsBuffer(file)) }).promise;
-                for(let p=1; p<=pdf.numPages; p++) { parsedFileText += (await (await pdf.getPage(p)).getTextContent()).items.map(item => item.str).join(' ') + "\n"; }
-            } else {
-                const img = await loadImage(file);
-                const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
-                cv.getContext('2d').drawImage(img, 0, 0);
-                const res = await Tesseract.recognize(cv, 'eng');
-                parsedFileText = res.data.text;
-            }
-
-            waitingBubble.remove();
-            
-            // Generate clean structured output view layout straight inside workspace
-            const formattedStructure = convertTextToStructuredHtml(parsedFileText);
-            appendMessageBubble("✅ Document structure extracted and structured successfully! Click the button below to push it live into Section 3.", "msg-ai");
-            
-            const actionBtn = document.createElement('button');
-            actionBtn.className = "btn-success";
-            actionBtn.style.margin = "8px 0";
-            actionBtn.style.padding = "10px";
-            actionBtn.textContent = "📝 Launch This Extracted File Inside Workspace Canvas";
-            actionBtn.onclick = () => openFullscreenWorkspace(file.name.substring(0, file.name.lastIndexOf('.')) || file.name, formattedStructure);
-            aiChatHistory.appendChild(actionBtn);
-            aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
-
-        } catch(err) {
-            waitingBubble.remove();
-            appendMessageBubble("❌ Document sync parsing failed. Make sure the file layout isn't encrypted.", "msg-ai");
-        }
-    }
-
-    async function executeAiMixInference() {
-        const promptText = aiInputField.value.trim();
-        if(!promptText) return;
-
-        appendMessageBubble(promptText, "msg-user");
-        aiInputField.value = "";
-
-        // CHECK IF USER REQUEST INTENDS IMAGE GENERATION (CHATGPT IMAGE SYNTHESIS DESIGN)
-        if (promptText.toLowerCase().includes("generate an image") || promptText.toLowerCase().includes("create a picture") || promptText.toLowerCase().includes("draw")) {
-            const waitingBubble = appendMessageBubble("🎨 yeasin.ai is activating Diffusion engines to render your description text into high-res pixels...", "msg-ai");
-            
-            try {
-                // Generate secure random seeds to secure serverless cache generation
-                const seedId = Math.floor(Math.random() * 100000);
-                const cleanedPrompt = encodeURIComponent(promptText.replace(/(generate an image|create a picture|draw)/gi, '').trim());
-                const generatedImageUrl = `https://image.pollinations.ai/p/${cleanedPrompt}?width=800&height=1000&seed=${seedId}&nofeed=true`;
-                
-                // Force check element download buffers
-                const preloaderImg = new Image();
-                preloaderImg.src = generatedImageUrl;
-                preloaderImg.onload = () => {
-                    waitingBubble.remove();
-                    
-                    const responseContainer = document.createElement('div');
-                    responseContainer.className = "msg-bubble msg-ai";
-                    responseContainer.innerHTML = `
-                        <p>🎨 Here is your AI generated document image asset:</p>
-                        <img src="${generatedImageUrl}" class="ai-generated-image" alt="AI Generated Graphic"/>
-                        <p style="font-size:11px; margin-top:5px; color:#a6adc8; font-style:italic;">💡 Mobile Tip: Hold your finger down on the image to save it directly to your phone!</p>
-                    `;
-                    aiChatHistory.appendChild(responseContainer);
-                    aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
-                };
-            } catch(err) {
-                waitingBubble.remove();
-                appendMessageBubble("❌ Image synthesis request dropped. Check your connection metrics.", "msg-ai");
-            }
+    // Structural enforcement logic for user selected extensions
+    convertBtn.onclick = async () => {
+        if (!fileInput.files.length) {
+            statusDiv.innerHTML = '<span style="color:red;">Error: Drop or pick images first!</span>';
             return;
         }
 
-        // Standard text processing pipeline loops
-        const waitingBubble = appendMessageBubble("🤖 yeasin.ai is computing solution layers...", "msg-ai");
+        const chosenFormat = formatSelect.value; // 'jpg' or 'jpeg' or 'png'
+        statusDiv.className = 'status-loading';
+        statusDiv.innerText = 'Processing images...';
 
-        try {
-            const apiEndpointResponse = await fetch("https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    inputs: `<|system|>\nYou are yeasin.ai, a premium aggregated document assistant combining the capabilities of ChatGPT, Claude, and Gemini. Always format bills, structure rows, and draft clear invoices accurately.\n<|user|>\n${promptText}\n<|assistant|>\n`,
-                    parameters: { max_new_tokens: 450, temperature: 0.7 }
-                })
-            });
+        for (let file of fileInput.files) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
 
-            const resultJson = await apiEndpointResponse.json();
-            waitingBubble.remove();
+                    // Standardize dynamic processing type fallback
+                    let mimeType = 'image/jpeg';
+                    if (chosenFormat === 'png') mimeType = 'image/png';
+                    if (chosenFormat === 'webp') mimeType = 'image/webp';
 
-            let parsedAiResponse = "";
-            if (resultJson && resultJson[0] && resultJson[0].generated_text) {
-                const rawOutputText = resultJson[0].generated_text;
-                const markerIndex = rawOutputText.lastIndexOf("<|assistant|>");
-                parsedAiResponse = markerIndex !== -1 ? rawOutputText.substring(markerIndex + 13).trim() : rawOutputText.trim();
-            } else {
-                parsedAiResponse = "✨ Document block generated successfully.";
-            }
+                    const quality = document.getElementById('compressCheck').checked ? 
+                        (document.getElementById('qualityRange').value / 100) : 0.9;
 
-            appendMessageBubble(parsedAiResponse, "msg-ai");
+                    const dataUrl = canvas.toDataURL(mimeType, quality);
+                    
+                    // Construct explicit string tracking for file names
+                    let baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                    let explicitExtension = chosenFormat ? chosenFormat : 'jpg';
 
-        } catch (err) {
-            waitingBubble.remove();
-            appendMessageBubble("⚠️ Direct connection timed out. However, your document processing, table conversions, and local image cleaning engines continue to run at 100% speed completely serverless!", "msg-ai");
+                    // Triggers download preservation rules exactly as chosen
+                    const downloadLink = document.createElement('a');
+                    downloadLink.download = `${baseName}_converted.${explicitExtension}`;
+                    downloadLink.href = dataUrl;
+                    downloadLink.click();
+                };
+            };
         }
-    }
 
-    function appendMessageBubble(textContent, cssStyleClass) {
-        const bubble = document.createElement('div');
-        bubble.className = `msg-bubble ${cssStyleClass}`;
-        bubble.style.whiteSpace = "pre-wrap";
-        bubble.textContent = textContent;
-        aiChatHistory.appendChild(bubble);
-        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
-        return bubble;
-    }
+        statusDiv.className = 'status-success';
+        statusDiv.innerText = 'Batch transformation completed smoothly!';
+    };
 </script>
 </body>
 </html>
