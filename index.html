@@ -486,11 +486,10 @@
         for (let file of activeBatchFiles) {
             totalOriginalSize += file.size;
             if (file.type.startsWith('image/')) {
-                // Algorithmic calculation curve mapping visual file layout payload footprints
                 totalEstimatedSize += file.size * (quality * 0.85);
                 processableImagesCount++;
             } else {
-                totalEstimatedSize += file.size; // Formats like PDF/DOCX remain constant during calculations
+                totalEstimatedSize += file.size;
             }
         }
 
@@ -541,20 +540,97 @@
         document.getElementById('downloadToast').style.display = 'none';
     }
 
-    // Quick implementation structure stub to prevent runtime code failures
-    document.getElementById('convertBtn').addEventListener('click', () => {
-        if(activeBatchFiles.length === 0) {
+    // Production-Ready Native Image Processing and Download Engine
+    document.getElementById('convertBtn').addEventListener('click', async () => {
+        if (activeBatchFiles.length === 0) {
             alert('Please select or drag files first.');
             return;
         }
-        showToast('Processing Batch', 'Applying real-time transformations...');
-        setTimeout(() => {
-            hideToast();
-            document.getElementById('status').innerHTML = "<span class='status-success'>✓ Action simulated successfully. Bundle configured.</span>";
-        }, 1500);
+
+        showToast('Processing Batch', 'Applying real-time transformations and generating downloads...');
+        document.getElementById('status').innerHTML = "<span class='status-loading'>Processing files...</span>";
+
+        let processedCount = 0;
+
+        for (let file of activeBatchFiles) {
+            // Check if file is an image
+            if (file.type.startsWith('image/')) {
+                try {
+                    await processAndDownloadImage(file);
+                    processedCount++;
+                } catch (err) {
+                    console.error("Error processing file: " + file.name, err);
+                }
+            }
+        }
+
+        hideToast();
+        if (processedCount > 0) {
+            document.getElementById('status').innerHTML = `<span class='status-success'>✓ Successfully processed and downloaded ${processedCount} file(s)!</span>`;
+        } else {
+            document.getElementById('status').innerHTML = "<span style='color: var(--warning);'>⚠ Process completed. No image files were available to process.</span>";
+        }
     });
 
-    // Basic Stub Engine Implementation for AI Sandbox UI Interface Window 
+    // Promise wrapper using HTML5 Canvas to compression-render and trigger direct browser anchor click download pipelines
+    function processAndDownloadImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    // Draw image on canvas to handle configuration parameters
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    // Determine formatting configurations
+                    let targetFormat = document.getElementById('formatSelect').value;
+                    let mimeType = file.type; // Default fallback option configuration
+                    let fileExtension = file.name.split('.').pop();
+
+                    if (targetFormat === 'jpg' || targetFormat === 'jpeg') {
+                        mimeType = 'image/jpeg';
+                        fileExtension = targetFormat;
+                    } else if (targetFormat === 'png') {
+                        mimeType = 'image/png';
+                        fileExtension = 'png';
+                    } else if (targetFormat === 'webp') {
+                        mimeType = 'image/webp';
+                        fileExtension = 'webp';
+                    }
+
+                    // Determine quality mapping configurations
+                    let compressionQuality = 1.0; 
+                    if (compressCheck.checked) {
+                        compressionQuality = parseInt(qualityRange.value) / 100;
+                    }
+
+                    // Convert to base64 structural download matrix URL bundle mapping
+                    const dataUrl = canvas.toDataURL(mimeType, compressionQuality);
+                    
+                    // Trigger Native System Anchor Download Event
+                    const downloadLink = document.createElement('a');
+                    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                    downloadLink.download = `${baseName}_converted.${fileExtension}`;
+                    downloadLink.href = dataUrl;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                    
+                    resolve();
+                };
+                img.onerror = reject;
+                img.src = event.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // AI Sandbox Interface Stubs
     document.getElementById('aiSendBtn').addEventListener('click', () => {
         const query = document.getElementById('aiInputField').value;
         if(!query.trim()) return;
